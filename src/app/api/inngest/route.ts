@@ -1,4 +1,6 @@
 import { serve } from "inngest/next";
+
+export const dynamic = "force-dynamic";
 import { inngest } from "@/lib/inngest/client";
 import { inngestFunctions } from "@/lib/inngest/functions";
 

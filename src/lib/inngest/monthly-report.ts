@@ -6,7 +6,11 @@ import { analyzeMetrics } from "@/lib/pipeline/analyze";
 import { compileReportPdf } from "@/lib/pipeline/compile-pdf";
 import { storeReportPdf } from "@/lib/pipeline/store";
 import { deliverReport } from "@/lib/pipeline/deliver";
-import { MAX_CONCURRENT_CLIENTS } from "@/lib/constants";
+import {
+  MAX_CONCURRENT_CLIENTS,
+  MAX_INGEST_RETRIES,
+  INGEST_BASE_BACKOFF_MS,
+} from "@/lib/constants";
 import type { ReportStatus } from "@prisma/client";
 
 async function runPipelineForClient(clientId: string, agencyId: string, period: Date) {
@@ -27,7 +31,24 @@ async function runPipelineForClient(clientId: string, agencyId: string, period: 
 
   try {
     await updateStatus("INGESTING");
-    await ingestClientMetrics(clientId, agencyId, period);
+    for (let attempt = 0; attempt <= MAX_INGEST_RETRIES; attempt++) {
+      try {
+        await ingestClientMetrics(clientId, agencyId, period);
+        break;
+      } catch (err) {
+        const isRateLimit =
+          err instanceof Error &&
+          (err.message === "GA_RATE_LIMIT" ||
+            err.message === "GSC_RATE_LIMIT" ||
+            err.message === "META_RATE_LIMIT");
+        if (isRateLimit && attempt < MAX_INGEST_RETRIES) {
+          const waitMs = INGEST_BASE_BACKOFF_MS * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+          continue;
+        }
+        throw err;
+      }
+    }
 
     await updateStatus("PROCESSING");
     const processed = await processClientMetrics(clientId, period);

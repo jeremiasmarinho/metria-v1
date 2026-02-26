@@ -4,6 +4,7 @@ import type { ProcessedMetrics } from "@/types/integrations";
 import { PdfHeader } from "./components/header";
 import { MetricsTable } from "./components/metrics-table";
 import { ExecutiveSummary } from "./components/executive-summary";
+import { ChartImage } from "./components/chart-image";
 import { styles } from "./styles";
 
 interface ReportTemplateProps {
@@ -11,6 +12,7 @@ interface ReportTemplateProps {
   period: string;
   processed: ProcessedMetrics;
   aiAnalysis: string;
+  chartImages?: string[];
 }
 
 export function ReportTemplate({
@@ -18,6 +20,7 @@ export function ReportTemplate({
   period,
   processed,
   aiAnalysis,
+  chartImages = [],
 }: ReportTemplateProps) {
   const rows: Array<{ label: string; value: string | number; variation?: number }> = [];
 
@@ -60,6 +63,9 @@ export function ReportTemplate({
       <Page size="A4" style={styles.page}>
         <PdfHeader clientName={clientName} period={period} />
         <ExecutiveSummary content={aiAnalysis} />
+        {chartImages.map((src, i) => (
+          <ChartImage key={i} src={src} />
+        ))}
         {rows.length > 0 && (
           <MetricsTable rows={rows} />
         )}

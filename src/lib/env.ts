@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().url().optional(),
-  DIRECT_URL: z.string().url().optional(),
-  NEXTAUTH_SECRET: z.string().min(32).optional(),
+  DATABASE_URL: z.string().url(),
+  DIRECT_URL: z.string().url(),
+  NEXTAUTH_SECRET: z.string().min(32),
   NEXTAUTH_URL: z.string().url().optional(),
-  AGENCY_ID: z.string().optional(),
-  ENCRYPTION_KEY: z.string().length(64).regex(/^[a-f0-9]+$/i).optional(),
+  AGENCY_ID: z.string().min(1),
+  ENCRYPTION_KEY: z.string().length(64).regex(/^[a-f0-9]+$/i),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   META_APP_ID: z.string().optional(),
@@ -16,7 +16,7 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET_NAME: z.string().optional(),
-  R2_PUBLIC_URL: z.string().url().optional(),
+  R2_PUBLIC_URL: z.union([z.string().url(), z.literal("")]).optional(),
   ZAPI_INSTANCE_ID: z.string().optional(),
   ZAPI_TOKEN: z.string().optional(),
   ZAPI_SECURITY_TOKEN: z.string().optional(),
@@ -37,4 +37,7 @@ function validateEnv(): Env {
   return result.data;
 }
 
-export const env = process.env.DATABASE_URL ? validateEnv() : ({} as Env);
+const isNextBuild = process.env.NEXT_PHASE === "phase-production-build";
+const isTest = process.env.VITEST === "true" || process.env.NODE_ENV === "test";
+
+export const env = isNextBuild || isTest ? ({} as Env) : validateEnv();

@@ -18,6 +18,8 @@ export const REPORT_STATUSES = [
 ] as const;
 
 export const MAX_CONCURRENT_CLIENTS = 3;
+export const MAX_INGEST_RETRIES = 3;
+export const INGEST_BASE_BACKOFF_MS = 10_000;
 export const OPENAI_TIMEOUT_MS = 60_000;
 export const OPENAI_MAX_RETRIES = 2;
 export const R2_URL_EXPIRATION_DAYS = 30;

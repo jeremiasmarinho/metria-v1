@@ -1,8 +1,14 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { decrypt } from "@/lib/crypto";
 import type { ClientIntegrations } from "@/types/client";
 import { fetchGoogleAnalyticsMetrics } from "@/lib/integrations/google-analytics";
 import { fetchSearchConsoleMetrics } from "@/lib/integrations/google-search-console";
 import { fetchMetaAdsMetrics } from "@/lib/integrations/meta-ads";
+import {
+  ensureFreshGoogleTokens,
+  assertMetaTokenValid,
+} from "@/lib/integrations/oauth-refresh";
 import type { MetricSource } from "@prisma/client";
 
 function getMonthRange(period: Date): { start: string; end: string } {
@@ -28,17 +34,25 @@ export async function ingestClientMetrics(
 
   const sourcesToFetch: Array<{ source: MetricSource; fn: () => Promise<object> }> = [];
 
-  if (integrations.google?.accessToken) {
-    const tokens = integrations.google;
-    const accessToken = tokens.accessToken; // TODO: refresh if expired
-    const reportConfig = client.reportConfig as { googlePropertyId?: string; googleSiteUrl?: string };
+  if (integrations.google?.accessToken && integrations.google?.refreshToken) {
+    const decrypted = {
+      accessToken: decrypt(integrations.google.accessToken),
+      refreshToken: decrypt(integrations.google.refreshToken),
+      expiresAt: integrations.google.expiresAt,
+    };
+    const fresh = await ensureFreshGoogleTokens(clientId, decrypted);
+    const reportConfig = client.reportConfig as {
+      googlePropertyId?: string;
+      googleSiteUrl?: string;
+    };
+
     if (reportConfig?.googlePropertyId) {
       sourcesToFetch.push({
         source: "GOOGLE_ANALYTICS",
         fn: () =>
           fetchGoogleAnalyticsMetrics({
             clientId,
-            accessToken,
+            accessToken: fresh.accessToken,
             propertyId: reportConfig.googlePropertyId!,
             startDate,
             endDate,
@@ -50,7 +64,7 @@ export async function ingestClientMetrics(
         source: "GOOGLE_SEARCH_CONSOLE",
         fn: () =>
           fetchSearchConsoleMetrics({
-            accessToken,
+            accessToken: fresh.accessToken,
             siteUrl: reportConfig.googleSiteUrl!,
             startDate,
             endDate,
@@ -60,14 +74,15 @@ export async function ingestClientMetrics(
   }
 
   if (integrations.meta?.accessToken) {
-    const meta = integrations.meta;
+    assertMetaTokenValid(integrations.meta.expiresAt);
+    const decryptedMetaToken = decrypt(integrations.meta.accessToken);
     const reportConfig = client.reportConfig as { metaAdAccountId?: string };
     if (reportConfig?.metaAdAccountId) {
       sourcesToFetch.push({
         source: "META_ADS",
         fn: () =>
           fetchMetaAdsMetrics({
-            accessToken: meta.accessToken,
+            accessToken: decryptedMetaToken,
             adAccountId: reportConfig.metaAdAccountId!,
             startDate,
             endDate,
@@ -87,10 +102,21 @@ export async function ingestClientMetrics(
         update: { data, fetchedAt: new Date() },
       });
     } catch (err) {
-      const code = err instanceof Error ? err.message : String(err);
-      if (code === "GA_RATE_LIMIT" || code === "GSC_RATE_LIMIT" || code === "META_RATE_LIMIT") {
+      if (
+        err instanceof Error &&
+        (err.message === "GA_RATE_LIMIT" ||
+          err.message === "GSC_RATE_LIMIT" ||
+          err.message === "META_RATE_LIMIT")
+      ) {
         throw err;
       }
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        continue;
+      }
+      console.error(`[ingest] Error fetching ${source}:`, err);
     }
   }
 }
