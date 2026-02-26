@@ -1,0 +1,23 @@
+export const METRIC_SOURCES = [
+  "GOOGLE_ANALYTICS",
+  "GOOGLE_SEARCH_CONSOLE",
+  "META_ADS",
+] as const;
+
+export const REPORT_STATUSES = [
+  "PENDING",
+  "INGESTING",
+  "PROCESSING",
+  "ANALYZING",
+  "COMPILING",
+  "STORING",
+  "DELIVERING",
+  "COMPLETED",
+  "FAILED",
+  "PARTIAL",
+] as const;
+
+export const MAX_CONCURRENT_CLIENTS = 3;
+export const OPENAI_TIMEOUT_MS = 60_000;
+export const OPENAI_MAX_RETRIES = 2;
+export const R2_URL_EXPIRATION_DAYS = 30;
