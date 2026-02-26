@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
 import { LayoutDashboard, Users, FileText, Settings } from "lucide-react";
 
 const navItems = [
@@ -9,6 +12,8 @@ const navItems = [
 ];
 
 export function Sidebar() {
+  const { data: session } = useSession();
+
   return (
     <aside className="flex w-56 flex-col border-r bg-muted/30">
       <div className="flex h-14 items-center border-b px-6">
@@ -26,6 +31,16 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
+      <div className="border-t p-4">
+        <p className="text-sm truncate">{session?.user?.name ?? "—"}</p>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+        >
+          Sair
+        </button>
+      </div>
     </aside>
   );
 }

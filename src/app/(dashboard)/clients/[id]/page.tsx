@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { Shell } from "@/components/layout/shell";
 import { notFound } from "next/navigation";
 import { ReportCard } from "@/components/reports/report-card";
+import { ClientIntegrations } from "@/components/clients/client-integrations";
+import { GenerateReportButton } from "@/components/clients/generate-report-button";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,6 +17,13 @@ export default async function ClientDetailPage({ params }: PageProps) {
   });
 
   if (!client) notFound();
+
+  const integrations = client.integrations as Record<string, unknown> | null;
+  const reportConfig = (client.reportConfig ?? {}) as {
+    googlePropertyId?: string;
+    googleSiteUrl?: string;
+    metaAdAccountId?: string;
+  };
 
   return (
     <Shell title={client.name}>
@@ -37,6 +46,10 @@ export default async function ClientDetailPage({ params }: PageProps) {
           </dl>
         </div>
         <div>
+          <h3 className="font-medium mb-4">Gerar relatório</h3>
+          <GenerateReportButton clientId={client.id} />
+        </div>
+        <div>
           <h3 className="font-medium mb-4">Últimos relatórios</h3>
           <div className="space-y-2">
             {client.reports.map((report) => (
@@ -52,6 +65,15 @@ export default async function ClientDetailPage({ params }: PageProps) {
           {client.reports.length === 0 && (
             <p className="text-muted-foreground text-sm">Nenhum relatório ainda.</p>
           )}
+        </div>
+        <div>
+          <h3 className="font-medium mb-4">Integrações</h3>
+          <ClientIntegrations
+            clientId={client.id}
+            reportConfig={reportConfig}
+            hasGoogle={!!integrations?.google}
+            hasMeta={!!integrations?.meta}
+          />
         </div>
       </div>
     </Shell>
