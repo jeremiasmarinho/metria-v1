@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ClientForm } from "@/components/clients/client-form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -29,9 +30,18 @@ export default function NewClientPage() {
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-6">Novo cliente</h2>
-      <ClientForm onSubmit={handleSubmit} />
+    <div className="max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>Adicionar Cliente</CardTitle>
+          <CardDescription>
+            Preencha os dados básicos do cliente. Você poderá configurar as integrações na próxima tela.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ClientForm onSubmit={handleSubmit} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
