@@ -1,502 +1,911 @@
-# TAREFAS — Blindagem, Resiliência e Gráficos
+# TAREFAS — Autenticação, Testes Críticos, Settings e Prova de Fogo
 
 > **Documento de execução para o Composer.**
 > Toda alteração DEVE respeitar o ficheiro `ARCHITECTURE.md` na raiz do projeto.
-> NÃO crie ficheiros que não existam na estrutura de pastas da secção 4 da arquitetura.
-> NÃO invente variáveis de ambiente — use apenas as listadas na secção 6 da arquitetura.
-> NÃO altere o schema Prisma (`prisma/schema.prisma`) — ele já está completo e correto.
+> NÃO crie ficheiros fora da estrutura da secção 4 da arquitetura (excepto onde indicado).
+> NÃO invente variáveis de ambiente — use apenas as da secção 6.
+> NÃO altere o `prisma/schema.prisma`.
+> NÃO altere ficheiros do pipeline (`src/lib/pipeline/*`, `src/lib/integrations/*`, `src/lib/inngest/*`).
 
 ---
 
-## PASSO 1 — Blindar a Fundação (Segurança e Env)
+## PASSO 1 — Autenticação com NextAuth (Bloqueante)
 
-### Tarefa 1.1 — Tornar variáveis obrigatórias no `src/lib/env.ts`
+A secção 8 do `ARCHITECTURE.md` define:
+- Autenticação: NextAuth.js com provider Credentials (V1)
+- Sessão: JWT com NEXTAUTH_SECRET
+- Senhas: Hash com bcrypt (salt rounds: 12)
 
-**Ficheiro:** `src/lib/env.ts`
+O seed (`prisma/seed.ts`) já cria o utilizador `admin@metria.com` com password `admin123` (bcrypt, 12 rounds). NÃO criar ecrãs de registo nem recuperação de password. O único caminho de entrada é o login.
 
-**Problema atual:** Todas as 27 variáveis estão com `.optional()`. Se `ENCRYPTION_KEY` ou `DATABASE_URL` faltarem, o sistema arranca e falha em runtime no meio do pipeline.
+---
+
+### Tarefa 1.1 — Criar a rota NextAuth
+
+**Ficheiro a criar:** `src/app/api/auth/[...nextauth]/route.ts`
 
 **O que fazer:**
 
-Alterar o schema Zod para que as variáveis críticas sejam **obrigatórias** (sem `.optional()`). As variáveis de integrações externas que dependem de cada cliente podem continuar opcionais.
-
-Variáveis que DEVEM ser **obrigatórias** (remover o `.optional()`):
-
-```
-DATABASE_URL        → z.string().url()
-DIRECT_URL          → z.string().url()
-NEXTAUTH_SECRET     → z.string().min(32)
-AGENCY_ID           → z.string().min(1)
-ENCRYPTION_KEY      → z.string().length(64).regex(/^[a-f0-9]+$/i)
-```
-
-Variáveis que DEVEM continuar **opcionais** (manter `.optional()`):
-
-```
-NEXTAUTH_URL
-GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET
-META_APP_ID
-META_APP_SECRET
-OPENAI_API_KEY
-R2_ACCOUNT_ID
-R2_ACCESS_KEY_ID
-R2_SECRET_ACCESS_KEY
-R2_BUCKET_NAME
-R2_PUBLIC_URL
-ZAPI_INSTANCE_ID
-ZAPI_TOKEN
-ZAPI_SECURITY_TOKEN
-RESEND_API_KEY
-EMAIL_FROM
-INNGEST_EVENT_KEY
-INNGEST_SIGNING_KEY
-```
-
-Alterar também a linha final do ficheiro. Atualmente é:
-
-```typescript
-export const env = process.env.DATABASE_URL ? validateEnv() : ({} as Env);
-```
-
-Substituir por:
-
-```typescript
-export const env = validateEnv();
-```
-
-**Justificação:** Se as variáveis obrigatórias faltarem, o sistema deve recusar-se a arrancar com uma mensagem clara. Não deve haver fallback silencioso.
-
-**Restrição:** NÃO adicionar novas variáveis. Usar apenas as que já existem no ficheiro e que estão listadas na secção 6 do `ARCHITECTURE.md`.
-
----
-
-### Tarefa 1.2 — Integrar `decrypt()` no `src/lib/pipeline/ingest.ts`
-
-**Ficheiro:** `src/lib/pipeline/ingest.ts`
-
-**Problema atual:** O campo `client.integrations` no banco de dados contém tokens OAuth que, segundo a secção 8 do `ARCHITECTURE.md`, DEVEM estar encriptados com AES-256-GCM usando `src/lib/crypto.ts`. Porém, o `ingest.ts` lê os tokens directamente sem desencriptar:
-
-```typescript
-// Linha 26 — lê o JSON cru do banco
-const integrations = client.integrations as unknown as ClientIntegrations;
-
-// Linha 33 — usa o token sem decrypt (ERRADO)
-const accessToken = tokens.accessToken; // TODO: refresh if expired
-```
-
-**O que fazer:**
-
-1. Adicionar o import de `decrypt` no topo do ficheiro:
-
-```typescript
-import { decrypt } from "@/lib/crypto";
-```
-
-2. Alterar a interface `ClientIntegrations` em `src/types/client.ts`. Os tokens no banco estão encriptados (são strings opacas no formato `iv:encrypted:tag`). A interface actual já está correcta para isso (são `string`). Não alterar a interface.
-
-3. No `ingest.ts`, após ler `integrations`, desencriptar cada token antes de usar. A lógica deve ser:
-
-```typescript
-// Após a linha 26, desencriptar os tokens:
-if (integrations.google?.accessToken) {
-  const decryptedAccessToken = decrypt(integrations.google.accessToken);
-  // usar decryptedAccessToken nas chamadas de GA4 e Search Console
-}
-
-if (integrations.meta?.accessToken) {
-  const decryptedMetaToken = decrypt(integrations.meta.accessToken);
-  // usar decryptedMetaToken na chamada de Meta Ads
-}
-```
-
-4. Substituir TODAS as referências a `tokens.accessToken` e `meta.accessToken` pelas versões desencriptadas.
-
-5. Remover o comentário `// TODO: refresh if expired` — isso será tratado na Tarefa 2.1.
-
-**Restrição:** NÃO alterar a assinatura das funções em `google-analytics.ts`, `google-search-console.ts` ou `meta-ads.ts`. Elas recebem `accessToken: string` (texto plano) e isso está correcto — a desencriptação acontece no `ingest.ts` antes de chamar essas funções.
-
-**Restrição:** NÃO alterar o `prisma/schema.prisma`. O campo `integrations Json` já suporta o formato encriptado.
-
----
-
-### Tarefa 1.3 — Tratar erro Prisma P2002 no `ingest.ts`
-
-**Ficheiro:** `src/lib/pipeline/ingest.ts`
-
-**Problema actual:** O bloco `catch` nas linhas 89-94 só verifica rate limits. A secção 9 do `ARCHITECTURE.md` diz:
-
-> Prisma P2002 (duplicata): Silencia o erro (métrica já existe, segue pipeline).
-
-**O que fazer:** No bloco `catch` do `for` (linha 89), adicionar verificação para o código de erro P2002 do Prisma. Se for P2002, ignorar silenciosamente (a métrica já existe, o pipeline continua). Para outros erros que não sejam rate limit, logar mas não interromper o pipeline.
-
-```typescript
-import { Prisma } from "@prisma/client";
-
-// No catch:
-catch (err) {
-  // Rate limits devem ser propagados para o Inngest tratar com backoff
-  if (err instanceof Error && (
-    err.message === "GA_RATE_LIMIT" ||
-    err.message === "GSC_RATE_LIMIT" ||
-    err.message === "META_RATE_LIMIT"
-  )) {
-    throw err;
-  }
-  // Prisma P2002 = duplicata, silenciar (métrica já existe)
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-    continue;
-  }
-  // Outros erros: logar mas não interromper o pipeline para as outras fontes
-  console.error(`[ingest] Error fetching ${source}:`, err);
-}
-```
-
-**Restrição:** O `upsert` já deveria evitar P2002, mas a arquitetura exige tratamento explícito como segurança extra. Manter o `upsert` E o tratamento P2002.
-
----
-
-## PASSO 2 — Resiliência do Pipeline (Refresh e Retries)
-
-### Tarefa 2.1 — Criar função de refresh de tokens OAuth
-
-**Ficheiro a criar:** `src/lib/integrations/oauth-refresh.ts`
-
-> **Nota:** Este ficheiro NÃO está listado explicitamente na secção 4 do `ARCHITECTURE.md`, mas está dentro de `src/lib/integrations/` que é o directório correcto para conectores de APIs externas. A necessidade de refresh é implícita na secção 8 (tokens OAuth) e no campo `expiresAt` da interface `ClientIntegrations`.
-
-**O que fazer:**
-
-1. Criar a função `refreshGoogleToken` que:
-   - Recebe o `refreshToken` (já desencriptado) e as credenciais `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` do env
-   - Faz POST para `https://oauth2.googleapis.com/token` com `grant_type=refresh_token`
-   - Retorna o novo `accessToken` e `expiresAt`
-
-2. Criar a função `ensureFreshTokens` que:
-   - Recebe o `clientId` e os tokens desencriptados
-   - Verifica se `expiresAt` é menor que `Date.now() + 300_000` (5 minutos de margem)
-   - Se expirado: chama `refreshGoogleToken`, encripta os novos tokens com `encrypt()`, actualiza o campo `integrations` do Client no banco, e retorna os novos tokens
-   - Se válido: retorna os tokens actuais sem alteração
-
-3. Para Meta: tokens de longa duração do Meta Ads (60 dias) não precisam de refresh automático na V1. A função deve apenas verificar `expiresAt` e lançar erro se expirado, com mensagem clara pedindo re-autenticação manual.
+1. Configurar NextAuth com o Credentials Provider.
+2. A função `authorize` deve:
+   - Receber `email` e `password` do formulário
+   - Buscar o utilizador na tabela `User` via Prisma (`db.user.findUnique({ where: { email } })`)
+   - Comparar a password com `bcryptjs.compare(password, user.password)`
+   - Se válido, retornar `{ id: user.id, email: user.email, name: user.name, role: user.role }`
+   - Se inválido, retornar `null`
+3. Configurar sessão JWT:
+   - `session: { strategy: "jwt" }`
+   - `secret: process.env.NEXTAUTH_SECRET`
+4. Configurar callbacks:
+   - `jwt`: incluir `user.id` e `user.role` no token
+   - `session`: incluir `id` e `role` na sessão
+5. Configurar `pages: { signIn: "/login" }` para redirecionar para a página de login existente.
 
 **Estrutura do ficheiro:**
 
 ```typescript
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { compare } from "bcryptjs";
 import { db } from "@/lib/db";
-import { encrypt, decrypt } from "@/lib/crypto";
 
-interface GoogleTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-}
+const handler = NextAuth({
+  providers: [
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "E-mail", type: "email" },
+        password: { label: "Senha", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
 
-const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // 5 minutos
+        const user = await db.user.findUnique({
+          where: { email: credentials.email },
+        });
+        if (!user) return null;
 
-export async function refreshGoogleToken(refreshToken: string): Promise<{
-  accessToken: string;
-  expiresAt: number;
-}> {
-  // POST https://oauth2.googleapis.com/token
-  // body: client_id, client_secret, refresh_token, grant_type=refresh_token
-  // Usar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET do process.env
-  // Retornar { accessToken, expiresAt: Date.now() + expires_in * 1000 }
-  // Em caso de erro, lançar Error com mensagem descritiva
-}
+        const isValid = await compare(credentials.password, user.password);
+        if (!isValid) return null;
 
-export async function ensureFreshGoogleTokens(
-  clientId: string,
-  tokens: GoogleTokens
-): Promise<GoogleTokens> {
-  // Se tokens.expiresAt > Date.now() + buffer, retornar tokens actuais
-  // Senão: chamar refreshGoogleToken(tokens.refreshToken)
-  // Encriptar novos tokens com encrypt()
-  // Actualizar client.integrations no banco com os tokens encriptados
-  // Retornar os novos tokens (em texto plano, para uso imediato)
-}
-
-export function assertMetaTokenValid(expiresAt: number): void {
-  // Se expiresAt < Date.now(), lançar Error:
-  // "Meta Ads token expired. Re-authenticate manually."
-}
-```
-
-**Restrição:** NÃO usar nenhuma lib OAuth externa. Usar `fetch` nativo para o endpoint do Google. As credenciais vêm de `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` (já existem no env.ts).
-
----
-
-### Tarefa 2.2 — Integrar refresh no `ingest.ts`
-
-**Ficheiro:** `src/lib/pipeline/ingest.ts`
-
-**O que fazer:** Após a desencriptação dos tokens (Tarefa 1.2), chamar `ensureFreshGoogleTokens` antes de usar os tokens do Google, e `assertMetaTokenValid` antes de usar o token do Meta.
-
-A lógica no bloco do Google deve ficar:
-
-```typescript
-if (integrations.google?.accessToken) {
-  const decrypted = {
-    accessToken: decrypt(integrations.google.accessToken),
-    refreshToken: decrypt(integrations.google.refreshToken),
-    expiresAt: integrations.google.expiresAt,
-  };
-  const fresh = await ensureFreshGoogleTokens(clientId, decrypted);
-  // usar fresh.accessToken nas chamadas de GA4 e Search Console
-}
-```
-
-Para Meta:
-
-```typescript
-if (integrations.meta?.accessToken) {
-  assertMetaTokenValid(integrations.meta.expiresAt);
-  const decryptedMetaToken = decrypt(integrations.meta.accessToken);
-  // usar decryptedMetaToken na chamada de Meta Ads
-}
-```
-
-**Restrição:** NÃO alterar as funções `fetchGoogleAnalyticsMetrics`, `fetchSearchConsoleMetrics`, `fetchMetaAdsMetrics`. Elas continuam a receber `accessToken: string` em texto plano.
-
----
-
-### Tarefa 2.3 — Implementar backoff exponencial no `monthly-report.ts`
-
-**Ficheiro:** `src/lib/inngest/monthly-report.ts`
-
-**Problema actual:** A secção 9 do `ARCHITECTURE.md` diz:
-
-> API Google retorna 429 (rate limit): Inngest `step.sleep()` com backoff exponencial. Max 3 retries.
-> API Meta retorna 429: Mesmo tratamento. Concorrência limitada a 3 clientes simultâneos.
-
-Actualmente, o `monthly-report.ts` chama `runPipelineForClient` dentro de `step.run()` mas não trata rate limits com backoff. Se uma API retornar 429, o erro propaga e o Inngest faz retry simples (sem espera).
-
-**O que fazer:**
-
-Alterar a função `runPipelineForClient` para envolver a chamada de `ingestClientMetrics` num loop de retry com backoff. A lógica deve ser:
-
-```typescript
-// Dentro de runPipelineForClient, substituir:
-//   await ingestClientMetrics(clientId, agencyId, period);
-// Por:
-
-const MAX_INGEST_RETRIES = 3;
-const BASE_BACKOFF_MS = 10_000; // 10 segundos
-
-for (let attempt = 0; attempt <= MAX_INGEST_RETRIES; attempt++) {
-  try {
-    await ingestClientMetrics(clientId, agencyId, period);
-    break; // sucesso, sair do loop
-  } catch (err) {
-    const isRateLimit = err instanceof Error && (
-      err.message === "GA_RATE_LIMIT" ||
-      err.message === "GSC_RATE_LIMIT" ||
-      err.message === "META_RATE_LIMIT"
-    );
-    if (isRateLimit && attempt < MAX_INGEST_RETRIES) {
-      const waitMs = BASE_BACKOFF_MS * Math.pow(2, attempt); // 10s, 20s, 40s
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-      continue;
-    }
-    throw err; // não é rate limit ou esgotou retries
-  }
-}
-```
-
-**Adicionar constantes ao `src/lib/constants.ts`:**
-
-```typescript
-export const MAX_INGEST_RETRIES = 3;
-export const INGEST_BASE_BACKOFF_MS = 10_000;
-```
-
-**Restrição:** NÃO alterar o cron `"0 6 2 * *"`. NÃO alterar `MAX_CONCURRENT_CLIENTS = 3`. NÃO alterar `retries: 2` do Inngest (isso é retry do Inngest, diferente do backoff interno). A concorrência e o cron já estão correctos conforme a arquitectura.
-
-**Restrição:** NÃO usar `step.sleep()` do Inngest para o backoff interno — usar `setTimeout` com `await` dentro do `step.run()`. O `step.sleep()` do Inngest é para pausas entre steps, não dentro de um step.
-
----
-
-## PASSO 3 — Resolver a Dependência do Gráfico
-
-### Tarefa 3.1 — Adicionar `chartjs-node-canvas` e `chart.js` ao projecto
-
-**Ficheiro:** `package.json`
-
-**Problema actual:** A secção 3 do `ARCHITECTURE.md` lista `chartjs-node-canvas` e `chart.js` como dependências obrigatórias. Foram removidos porque `chartjs-node-canvas` depende do pacote nativo `canvas` que requer libs do sistema (`libcairo2-dev`, `libpango1.0-dev`, etc.).
-
-**O que fazer:**
-
-1. Adicionar ao `dependencies` do `package.json`:
-
-```json
-"chartjs-node-canvas": "^4.1.6",
-"chart.js": "^3.9.0"
-```
-
-> **ATENÇÃO:** `chartjs-node-canvas@4.x` requer `chart.js@^3.5.1` (peer dependency). NÃO usar `chart.js@^4.x` — causa conflito de peer deps.
-
-2. Executar `npm install`. Se falhar com erro de `canvas` / `node-pre-gyp`, primeiro instalar as dependências do sistema:
-
-```bash
-sudo apt-get update && sudo apt-get install -y \
-  build-essential \
-  libcairo2-dev \
-  libpango1.0-dev \
-  libjpeg-dev \
-  libgif-dev \
-  librsvg2-dev \
-  pkg-config \
-  python3
-```
-
-Depois repetir `npm install`.
-
-3. Actualizar `next.config.mjs` para incluir `chartjs-node-canvas` nos pacotes externos:
-
-```javascript
-const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ["@react-pdf/renderer", "chartjs-node-canvas"],
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
+      },
+    }),
+  ],
+  session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
+  pages: { signIn: "/login" },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as { role: string }).role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as { id: string }).id = token.id as string;
+        (session.user as { role: string }).role = token.role as string;
+      }
+      return session;
+    },
   },
-};
-```
-
-**Restrição:** NÃO alterar nenhuma outra dependência do `package.json`. Apenas adicionar estas duas.
-
----
-
-### Tarefa 3.2 — Criar o Dockerfile para deploy no Coolify
-
-**Ficheiro a criar:** `Dockerfile` (raiz do projecto)
-
-> **Nota:** O `ARCHITECTURE.md` menciona "VPS Ubuntu + Coolify" na secção 2. O Dockerfile é necessário para que o Coolify consiga fazer build com as dependências nativas do `canvas`.
-
-**Conteúdo do Dockerfile:**
-
-```dockerfile
-FROM node:18-bookworm-slim AS base
-
-# Instalar dependências nativas para chartjs-node-canvas
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libjpeg-dev \
-    libgif-dev \
-    librsvg2-dev \
-    pkg-config \
-    python3 \
-  && rm -rf /var/lib/apt/lists/*
-
-FROM base AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npx prisma generate
-RUN npm run build
-
-FROM base AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-USER nextjs
-EXPOSE 3000
-ENV PORT=3000
-CMD ["node", "server.js"]
-```
-
-**Actualizar `next.config.mjs`** para suportar standalone output (necessário para o Dockerfile):
-
-```javascript
-const nextConfig = {
-  output: "standalone",
-  experimental: {
-    serverComponentsExternalPackages: ["@react-pdf/renderer", "chartjs-node-canvas"],
-  },
-};
-```
-
-**Restrição:** NÃO adicionar `docker-compose.yml`. O Coolify gere o deploy. Apenas o Dockerfile é necessário.
-
----
-
-### Tarefa 3.3 — Implementar geração de gráficos para o PDF
-
-**Ficheiro:** `src/pdf/components/chart-image.tsx`
-
-**Problema actual:** O componente existe mas apenas renderiza uma `<Image>` estática. Não há código que gere gráficos a partir dos dados.
-
-**O que fazer:**
-
-1. Criar um ficheiro utilitário `src/lib/charts.ts` (dentro de `src/lib/`, que é o directório para utilitários conforme a secção 4):
-
-```typescript
-import { ChartJSNodeCanvas } from "chartjs-node-canvas";
-
-const WIDTH = 600;
-const HEIGHT = 300;
-
-const chartJSNodeCanvas = new ChartJSNodeCanvas({
-  width: WIDTH,
-  height: HEIGHT,
-  backgroundColour: "white",
 });
 
-export async function generateBarChart(options: {
-  labels: string[];
-  datasets: Array<{
-    label: string;
-    data: number[];
-    backgroundColor?: string;
-  }>;
-  title?: string;
-}): Promise<Buffer> {
-  return chartJSNodeCanvas.renderToBuffer({
-    type: "bar",
-    data: {
-      labels: options.labels,
-      datasets: options.datasets.map((ds) => ({
-        label: ds.label,
-        data: ds.data,
-        backgroundColor: ds.backgroundColor ?? "rgba(59, 130, 246, 0.7)",
-      })),
-    },
-    options: {
-      plugins: {
-        title: options.title ? { display: true, text: options.title } : undefined,
-      },
-      scales: {
-        y: { beginAtZero: true },
-      },
-    },
+export { handler as GET, handler as POST };
+```
+
+**Restrição:** NÃO usar `@auth/prisma-adapter`. O schema não tem as tabelas Account/Session/VerificationToken do adapter. Usar apenas JWT puro.
+
+**Restrição:** Marcar a rota como `export const dynamic = "force-dynamic";` para evitar prerender.
+
+---
+
+### Tarefa 1.2 — Conectar a página de login ao NextAuth
+
+**Ficheiro:** `src/app/(auth)/login/page.tsx`
+
+**Problema actual:** A página de login é um formulário HTML estático que não faz nada.
+
+**O que fazer:**
+
+1. Converter para `"use client"`.
+2. Importar `signIn` de `next-auth/react`.
+3. Usar `useState` para `email`, `password` e `error`.
+4. No `onSubmit`:
+   - Chamar `signIn("credentials", { email, password, redirect: false })`
+   - Se `result?.error`, mostrar mensagem de erro
+   - Se sucesso, redirecionar para `/` com `router.push("/")`
+5. Manter o visual actual (formulário centrado, inputs de email e password, botão "Entrar").
+
+**Restrição:** NÃO adicionar link de registo. NÃO adicionar "Esqueci a senha". Apenas email + password + botão.
+
+---
+
+### Tarefa 1.3 — Criar middleware de autenticação
+
+**Ficheiro a criar:** `src/middleware.ts` (na raiz de `src/`, NÃO dentro de `app/`)
+
+**O que fazer:**
+
+1. Usar `getToken` de `next-auth/jwt` para verificar se o utilizador tem sessão.
+2. Proteger TODAS as rotas excepto:
+   - `/login`
+   - `/api/auth/*` (rotas do NextAuth)
+   - `/api/inngest` (o Inngest chama esta rota por cron, sem sessão)
+   - `/api/webhooks` (webhooks externos)
+   - `/_next/*` (assets estáticos do Next.js)
+   - `/favicon.ico`
+3. Se não autenticado, redirecionar para `/login`.
+4. Configurar o `matcher` para aplicar apenas às rotas necessárias.
+
+**Estrutura do ficheiro:**
+
+```typescript
+import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Rotas públicas — não exigem autenticação
+  const publicPaths = ["/login", "/api/auth", "/api/inngest", "/api/webhooks"];
+  const isPublic = publicPaths.some((p) => pathname.startsWith(p));
+  if (isPublic) return NextResponse.next();
+
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
   });
+
+  if (!token) {
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
+};
+```
+
+**Restrição:** NÃO usar `withAuth` wrapper do NextAuth. Usar `getToken` directamente — é mais simples e não requer configuração extra.
+
+---
+
+### Tarefa 1.4 — Adicionar SessionProvider ao layout
+
+**Ficheiro a criar:** `src/components/providers.tsx`
+
+**O que fazer:**
+
+1. Criar um Client Component que envolve `children` com `SessionProvider` do `next-auth/react`.
+
+```typescript
+"use client";
+
+import { SessionProvider } from "next-auth/react";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <SessionProvider>{children}</SessionProvider>;
 }
 ```
 
-2. Actualizar `src/lib/pipeline/compile-pdf.tsx` para gerar gráficos antes de renderizar o PDF:
+2. Actualizar `src/app/layout.tsx` para envolver o `body` com `<Providers>`:
 
-   - Importar `generateBarChart` de `@/lib/charts`
-   - Antes de chamar `renderToStream`, gerar os gráficos como Buffer PNG
-   - Converter os buffers para data URIs (`data:image/png;base64,...`)
-   - Passar as data URIs como props para o `ReportTemplate`
+```tsx
+<body className={inter.className}>
+  <Providers>{children}</Providers>
+</body>
+```
 
-3. Actualizar `src/pdf/report-template.tsx` para aceitar uma prop opcional `chartImages: string[]` e renderizar cada uma usando o componente `ChartImage`.
+**Restrição:** NÃO alterar mais nada no layout. Apenas adicionar o wrapper.
 
-4. O componente `src/pdf/components/chart-image.tsx` já está correcto — recebe `src: string` e renderiza `<Image>`. Não precisa de alteração.
+---
 
-**Restrição:** NÃO instalar outras libs de gráficos. Usar apenas `chartjs-node-canvas` + `chart.js` conforme a secção 3 do `ARCHITECTURE.md`.
+### Tarefa 1.5 — Mostrar utilizador na sidebar e adicionar logout
 
-**Restrição:** Processar 1 gráfico por vez e liberar o buffer após converter para base64, conforme a secção 9 do `ARCHITECTURE.md` ("VPS sem memória: Processar 1 cliente por vez. Liberar buffer após upload.").
+**Ficheiro:** `src/components/layout/sidebar.tsx`
+
+**O que fazer:**
+
+1. Converter para `"use client"`.
+2. Importar `useSession` e `signOut` de `next-auth/react`.
+3. No fundo da sidebar, mostrar o nome do utilizador e um botão "Sair".
+4. O botão "Sair" chama `signOut({ callbackUrl: "/login" })`.
+
+Adicionar ao final da `<aside>`, antes do `</aside>`:
+
+```tsx
+<div className="border-t p-4">
+  <p className="text-sm truncate">{session?.user?.name ?? "—"}</p>
+  <button
+    onClick={() => signOut({ callbackUrl: "/login" })}
+    className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+  >
+    Sair
+  </button>
+</div>
+```
+
+**Restrição:** NÃO alterar a navegação existente (Dashboard, Clientes, Relatórios, Configurações). Apenas adicionar o bloco de utilizador no fundo.
+
+---
+
+## PASSO 2 — Testes Críticos (Apenas 2)
+
+Apenas dois testes. Nada mais. O resto valida-se com dados reais.
+
+---
+
+### Tarefa 2.1 — Teste do crypto.ts (encrypt/decrypt roundtrip)
+
+**Ficheiro:** `tests/pipeline/crypto.test.ts` (renomear ou criar novo)
+
+**O que fazer:**
+
+Substituir o conteúdo por testes reais. Definir `ENCRYPTION_KEY` no ambiente de teste.
+
+```typescript
+import { describe, it, expect, beforeAll } from "vitest";
+
+beforeAll(() => {
+  // Chave de teste fixa (64 hex chars = 32 bytes)
+  process.env.ENCRYPTION_KEY =
+    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+});
+
+describe("crypto", () => {
+  it("encrypt → decrypt retorna o texto original", async () => {
+    const { encrypt, decrypt } = await import("@/lib/crypto");
+    const original = "ya29.a0AfH6SMBx_fake_google_access_token_1234567890";
+    const encrypted = encrypt(original);
+    const decrypted = decrypt(encrypted);
+    expect(decrypted).toBe(original);
+  });
+
+  it("texto encriptado tem formato iv:encrypted:tag", async () => {
+    const { encrypt } = await import("@/lib/crypto");
+    const encrypted = encrypt("test-token");
+    const parts = encrypted.split(":");
+    expect(parts).toHaveLength(3);
+    expect(parts[0]).toMatch(/^[a-f0-9]{32}$/); // IV = 16 bytes = 32 hex
+    expect(parts[2]).toMatch(/^[a-f0-9]{32}$/); // Tag = 16 bytes = 32 hex
+  });
+
+  it("encriptações diferentes do mesmo texto produzem resultados diferentes (IV aleatório)", async () => {
+    const { encrypt } = await import("@/lib/crypto");
+    const a = encrypt("same-token");
+    const b = encrypt("same-token");
+    expect(a).not.toBe(b); // IV diferente a cada chamada
+  });
+
+  it("decrypt com payload inválido lança erro", async () => {
+    const { decrypt } = await import("@/lib/crypto");
+    expect(() => decrypt("invalid-payload")).toThrow("Invalid encrypted payload format");
+  });
+
+  it("decrypt com chave errada falha", async () => {
+    const { encrypt } = await import("@/lib/crypto");
+    const encrypted = encrypt("secret-token");
+
+    // Mudar a chave
+    process.env.ENCRYPTION_KEY =
+      "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
+    // Reimportar para pegar a nova chave
+    // Nota: como getEncryptionKey() lê process.env a cada chamada, basta chamar decrypt
+    const { decrypt } = await import("@/lib/crypto");
+    expect(() => decrypt(encrypted)).toThrow();
+
+    // Restaurar chave original
+    process.env.ENCRYPTION_KEY =
+      "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  });
+});
+```
+
+**Restrição:** NÃO fazer mock de nada. Estes testes usam a implementação real de `crypto`.
+
+---
+
+### Tarefa 2.2 — Teste do calcVariation no process.ts
+
+**Ficheiro:** `tests/pipeline/process.test.ts`
+
+**Problema actual:** O teste só verifica se a função existe.
+
+**O que fazer:**
+
+A função `calcVariation` é privada (não exportada). Testar indirectamente não faz sentido sem banco. Em vez disso, **exportar** `calcVariation` do `process.ts` e testar directamente.
+
+1. No `src/lib/pipeline/process.ts`, alterar a linha 5:
+
+```typescript
+// De:
+function calcVariation(current: number, previous: number): number {
+// Para:
+export function calcVariation(current: number, previous: number): number {
+```
+
+2. Substituir o conteúdo de `tests/pipeline/process.test.ts`:
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { calcVariation } from "@/lib/pipeline/process";
+
+describe("calcVariation", () => {
+  it("calcula aumento de 100 para 150 como +50%", () => {
+    expect(calcVariation(150, 100)).toBe(50);
+  });
+
+  it("calcula queda de 200 para 100 como -50%", () => {
+    expect(calcVariation(100, 200)).toBe(-50);
+  });
+
+  it("anterior zero e actual positivo retorna 100%", () => {
+    expect(calcVariation(50, 0)).toBe(100);
+  });
+
+  it("ambos zero retorna 0%", () => {
+    expect(calcVariation(0, 0)).toBe(0);
+  });
+
+  it("valores iguais retorna 0%", () => {
+    expect(calcVariation(100, 100)).toBe(0);
+  });
+
+  it("calcula variação com decimais correctamente", () => {
+    // 33 para 100 = +203.03%
+    const result = calcVariation(100, 33);
+    expect(result).toBeCloseTo(203.03, 1);
+  });
+});
+```
+
+**Restrição:** NÃO alterar a lógica de `calcVariation`. Apenas exportar e testar.
+
+---
+
+### Tarefa 2.3 — Limpar os testes stub restantes
+
+**Ficheiros:**
+- `tests/pipeline/ingest.test.ts`
+- `tests/pipeline/analyze.test.ts`
+- `tests/integrations/google-analytics.test.ts`
+- `tests/integrations/meta-ads.test.ts`
+
+**O que fazer:**
+
+Apagar o conteúdo de cada ficheiro e substituir por um placeholder honesto:
+
+```typescript
+import { describe, it } from "vitest";
+
+describe("ingest", () => {
+  it.todo("validar com dados reais de cliente (teste E2E)");
+});
+```
+
+Fazer o mesmo para cada ficheiro, ajustando o nome do `describe`.
+
+**Justificação:** Testes que fazem `expect(typeof fn).toBe("function")` dão falsa confiança. Um `it.todo` é honesto — diz que o teste ainda não existe.
+
+---
+
+## PASSO 3 — Página de Settings Funcional
+
+A página de settings é o ponto de entrada para configurar as credenciais OAuth de um cliente. Sem ela, não há como inserir tokens reais no sistema.
+
+---
+
+### Tarefa 3.1 — Criar API para actualizar integrações do cliente
+
+**Ficheiro a criar:** `src/app/api/clients/[id]/route.ts`
+
+**O que fazer:**
+
+1. Criar um endpoint `PATCH` que aceita actualizações parciais de um cliente.
+2. Aceitar campos: `name`, `email`, `phone`, `active`, `integrations`, `reportConfig`.
+3. Quando `integrations` for enviado, **encriptar** os tokens OAuth com `encrypt()` antes de salvar.
+4. Validar com Zod.
+
+**Estrutura:**
+
+```typescript
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { encrypt } from "@/lib/crypto";
+import { z } from "zod";
+
+export const dynamic = "force-dynamic";
+
+const updateClientSchema = z.object({
+  name: z.string().min(1).optional(),
+  email: z.string().email().or(z.literal("")).optional(),
+  phone: z.string().optional(),
+  active: z.boolean().optional(),
+  integrations: z
+    .object({
+      google: z
+        .object({
+          accessToken: z.string(),
+          refreshToken: z.string(),
+          expiresAt: z.number(),
+        })
+        .optional(),
+      meta: z
+        .object({
+          accessToken: z.string(),
+          expiresAt: z.number(),
+        })
+        .optional(),
+    })
+    .optional(),
+  reportConfig: z
+    .object({
+      googlePropertyId: z.string().optional(),
+      googleSiteUrl: z.string().optional(),
+      metaAdAccountId: z.string().optional(),
+      logo: z.string().optional(),
+      primaryColor: z.string().optional(),
+    })
+    .optional(),
+});
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await request.json();
+  const parsed = updateClientSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const data: Record<string, unknown> = {};
+
+  if (parsed.data.name !== undefined) data.name = parsed.data.name;
+  if (parsed.data.email !== undefined) data.email = parsed.data.email || null;
+  if (parsed.data.phone !== undefined) data.phone = parsed.data.phone || null;
+  if (parsed.data.active !== undefined) data.active = parsed.data.active;
+  if (parsed.data.reportConfig !== undefined) data.reportConfig = parsed.data.reportConfig;
+
+  // Encriptar tokens OAuth antes de salvar
+  if (parsed.data.integrations) {
+    const encrypted: Record<string, unknown> = {};
+    if (parsed.data.integrations.google) {
+      const g = parsed.data.integrations.google;
+      encrypted.google = {
+        accessToken: encrypt(g.accessToken),
+        refreshToken: encrypt(g.refreshToken),
+        expiresAt: g.expiresAt,
+      };
+    }
+    if (parsed.data.integrations.meta) {
+      const m = parsed.data.integrations.meta;
+      encrypted.meta = {
+        accessToken: encrypt(m.accessToken),
+        expiresAt: m.expiresAt,
+      };
+    }
+    data.integrations = encrypted;
+  }
+
+  const client = await db.client.update({ where: { id }, data });
+  return NextResponse.json(client);
+}
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const client = await db.client.findUnique({ where: { id } });
+  if (!client) {
+    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  }
+  return NextResponse.json(client);
+}
+```
+
+**Restrição:** Os tokens chegam em texto plano do formulário e são encriptados ANTES de salvar. A API NUNCA retorna tokens desencriptados — o campo `integrations` no GET retorna os valores encriptados (strings opacas).
+
+---
+
+### Tarefa 3.2 — Reescrever a página de settings do cliente
+
+**Ficheiro:** `src/app/(dashboard)/clients/[id]/page.tsx`
+
+**Problema actual:** A página mostra informações do cliente mas não permite editar integrações nem configuração de relatório.
+
+**O que fazer:**
+
+Adicionar à página existente (abaixo das informações e relatórios) uma secção "Integrações" com formulários para:
+
+1. **Google (GA4 + Search Console):**
+   - Campo: `googlePropertyId` (ID da propriedade GA4, ex: `properties/123456789`)
+   - Campo: `googleSiteUrl` (URL do site no Search Console, ex: `https://example.com`)
+   - Campo: `accessToken` (token de acesso Google)
+   - Campo: `refreshToken` (refresh token Google)
+   - Botão "Salvar Google"
+
+2. **Meta Ads:**
+   - Campo: `metaAdAccountId` (ID da conta de anúncios, ex: `act_123456789`)
+   - Campo: `accessToken` (token de acesso Meta)
+   - Botão "Salvar Meta"
+
+Cada botão faz `PATCH /api/clients/[id]` com os dados correspondentes.
+
+**Implementação:**
+
+Criar um Client Component separado `src/components/clients/client-integrations.tsx`:
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+
+interface ClientIntegrationsProps {
+  clientId: string;
+  reportConfig: {
+    googlePropertyId?: string;
+    googleSiteUrl?: string;
+    metaAdAccountId?: string;
+  };
+  hasGoogle: boolean; // se já tem tokens Google configurados
+  hasMeta: boolean;   // se já tem tokens Meta configurados
+}
+
+export function ClientIntegrations({
+  clientId,
+  reportConfig,
+  hasGoogle,
+  hasMeta,
+}: ClientIntegrationsProps) {
+  // Estado para Google
+  const [googlePropertyId, setGooglePropertyId] = useState(reportConfig.googlePropertyId ?? "");
+  const [googleSiteUrl, setGoogleSiteUrl] = useState(reportConfig.googleSiteUrl ?? "");
+  const [googleAccessToken, setGoogleAccessToken] = useState("");
+  const [googleRefreshToken, setGoogleRefreshToken] = useState("");
+
+  // Estado para Meta
+  const [metaAdAccountId, setMetaAdAccountId] = useState(reportConfig.metaAdAccountId ?? "");
+  const [metaAccessToken, setMetaAccessToken] = useState("");
+
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function saveGoogle() {
+    setSaving(true);
+    setMessage("");
+    const body: Record<string, unknown> = {
+      reportConfig: { ...reportConfig, googlePropertyId, googleSiteUrl },
+    };
+    // Só enviar tokens se preenchidos (permite actualizar só o reportConfig)
+    if (googleAccessToken && googleRefreshToken) {
+      body.integrations = {
+        google: {
+          accessToken: googleAccessToken,
+          refreshToken: googleRefreshToken,
+          expiresAt: Date.now() + 3600 * 1000, // 1 hora
+        },
+      };
+    }
+    const res = await fetch(`/api/clients/${clientId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setSaving(false);
+    setMessage(res.ok ? "Google salvo com sucesso" : "Erro ao salvar Google");
+  }
+
+  async function saveMeta() {
+    setSaving(true);
+    setMessage("");
+    const body: Record<string, unknown> = {
+      reportConfig: { ...reportConfig, metaAdAccountId },
+    };
+    if (metaAccessToken) {
+      body.integrations = {
+        meta: {
+          accessToken: metaAccessToken,
+          expiresAt: Date.now() + 60 * 24 * 60 * 60 * 1000, // 60 dias
+        },
+      };
+    }
+    const res = await fetch(`/api/clients/${clientId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setSaving(false);
+    setMessage(res.ok ? "Meta salvo com sucesso" : "Erro ao salvar Meta");
+  }
+
+  return (
+    <div className="space-y-6">
+      {message && (
+        <p className={`text-sm ${message.includes("Erro") ? "text-red-600" : "text-green-600"}`}>
+          {message}
+        </p>
+      )}
+
+      {/* Google */}
+      <div className="rounded-lg border p-4 space-y-3">
+        <h3 className="font-medium">Google (GA4 + Search Console)</h3>
+        <p className="text-xs text-muted-foreground">
+          {hasGoogle ? "✓ Tokens configurados" : "✗ Tokens não configurados"}
+        </p>
+        <div className="grid gap-3">
+          <div>
+            <label className="block text-sm mb-1">Property ID (GA4)</label>
+            <input type="text" value={googlePropertyId}
+              onChange={(e) => setGooglePropertyId(e.target.value)}
+              placeholder="properties/123456789"
+              className="w-full rounded-md border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Site URL (Search Console)</label>
+            <input type="text" value={googleSiteUrl}
+              onChange={(e) => setGoogleSiteUrl(e.target.value)}
+              placeholder="https://example.com"
+              className="w-full rounded-md border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Access Token</label>
+            <input type="password" value={googleAccessToken}
+              onChange={(e) => setGoogleAccessToken(e.target.value)}
+              placeholder={hasGoogle ? "••• (já configurado, preencha para substituir)" : "Cole o access token"}
+              className="w-full rounded-md border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Refresh Token</label>
+            <input type="password" value={googleRefreshToken}
+              onChange={(e) => setGoogleRefreshToken(e.target.value)}
+              placeholder={hasGoogle ? "••• (já configurado, preencha para substituir)" : "Cole o refresh token"}
+              className="w-full rounded-md border px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <Button onClick={saveGoogle} disabled={saving}>
+          {saving ? "Salvando..." : "Salvar Google"}
+        </Button>
+      </div>
+
+      {/* Meta */}
+      <div className="rounded-lg border p-4 space-y-3">
+        <h3 className="font-medium">Meta Ads</h3>
+        <p className="text-xs text-muted-foreground">
+          {hasMeta ? "✓ Token configurado" : "✗ Token não configurado"}
+        </p>
+        <div className="grid gap-3">
+          <div>
+            <label className="block text-sm mb-1">Ad Account ID</label>
+            <input type="text" value={metaAdAccountId}
+              onChange={(e) => setMetaAdAccountId(e.target.value)}
+              placeholder="act_123456789"
+              className="w-full rounded-md border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Access Token</label>
+            <input type="password" value={metaAccessToken}
+              onChange={(e) => setMetaAccessToken(e.target.value)}
+              placeholder={hasMeta ? "••• (já configurado, preencha para substituir)" : "Cole o access token"}
+              className="w-full rounded-md border px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <Button onClick={saveMeta} disabled={saving}>
+          {saving ? "Salvando..." : "Salvar Meta"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+Depois, na página `src/app/(dashboard)/clients/[id]/page.tsx`, importar e renderizar `<ClientIntegrations>` abaixo dos relatórios:
+
+```tsx
+import { ClientIntegrations } from "@/components/clients/client-integrations";
+
+// Dentro do JSX, após a secção de relatórios:
+<div>
+  <h3 className="font-medium mb-4">Integrações</h3>
+  <ClientIntegrations
+    clientId={client.id}
+    reportConfig={(client.reportConfig ?? {}) as {
+      googlePropertyId?: string;
+      googleSiteUrl?: string;
+      metaAdAccountId?: string;
+    }}
+    hasGoogle={!!(client.integrations as Record<string, unknown>)?.google}
+    hasMeta={!!(client.integrations as Record<string, unknown>)?.meta}
+  />
+</div>
+```
+
+**Restrição:** NÃO mostrar tokens desencriptados. Os campos de token são sempre `type="password"` e começam vazios. O placeholder indica se já estão configurados.
+
+---
+
+### Tarefa 3.3 — Actualizar a página de settings da agência
+
+**Ficheiro:** `src/app/(dashboard)/settings/page.tsx`
+
+**Problema actual:** A página é um shell vazio.
+
+**O que fazer:**
+
+Mostrar informações úteis da agência e links para configurar clientes. NÃO criar formulários complexos — na V1, as configurações da agência (GOOGLE_CLIENT_ID, etc.) são variáveis de ambiente.
+
+```tsx
+import { Shell } from "@/components/layout/shell";
+import Link from "next/link";
+
+export default function SettingsPage() {
+  const envStatus = (key: string) => !!process.env[key];
+
+  return (
+    <Shell title="Configurações">
+      <div className="space-y-6 max-w-xl">
+        <div className="rounded-lg border p-4">
+          <h3 className="font-medium">Agência</h3>
+          <dl className="mt-2 space-y-1 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">AGENCY_ID</dt>
+              <dd>{process.env.AGENCY_ID ? "✓ Configurado" : "✗ Falta"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="rounded-lg border p-4">
+          <h3 className="font-medium">Variáveis de Ambiente</h3>
+          <p className="text-xs text-muted-foreground mb-2">
+            Configuradas no .env.local ou no Coolify.
+          </p>
+          <dl className="space-y-1 text-sm">
+            {[
+              ["Google OAuth", "GOOGLE_CLIENT_ID"],
+              ["Meta OAuth", "META_APP_ID"],
+              ["OpenAI", "OPENAI_API_KEY"],
+              ["Cloudflare R2", "R2_ACCOUNT_ID"],
+              ["Z-API (WhatsApp)", "ZAPI_INSTANCE_ID"],
+              ["Resend (E-mail)", "RESEND_API_KEY"],
+              ["Inngest", "INNGEST_EVENT_KEY"],
+            ].map(([label, key]) => (
+              <div key={key} className="flex justify-between">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd>{envStatus(key) ? "✓" : "✗"}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <div className="rounded-lg border p-4">
+          <h3 className="font-medium">Integrações dos Clientes</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure tokens OAuth e IDs de propriedade na página de cada cliente.
+          </p>
+          <Link href="/clients" className="text-sm text-primary hover:underline mt-2 inline-block">
+            Ir para Clientes →
+          </Link>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+```
+
+**Restrição:** NÃO mostrar valores de variáveis de ambiente. Apenas indicar se estão configuradas (✓/✗).
+
+---
+
+## PASSO 4 — Botão de Geração Manual na Página do Cliente
+
+### Tarefa 4.1 — Adicionar botão "Gerar Relatório" na página do cliente
+
+**Ficheiro:** `src/app/(dashboard)/clients/[id]/page.tsx`
+
+**O que fazer:**
+
+Adicionar um Client Component com um botão que permite gerar um relatório manualmente para o mês anterior. Este botão:
+
+1. Cria um Report com status PENDING via `POST /api/reports` (ou directamente)
+2. Chama `POST /api/reports/[id]/generate` para disparar o pipeline via Inngest
+
+Criar `src/components/clients/generate-report-button.tsx`:
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+
+export function GenerateReportButton({ clientId }: { clientId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleGenerate() {
+    setLoading(true);
+    setMessage("Criando relatório...");
+
+    // Criar o report primeiro
+    const now = new Date();
+    const period = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    const createRes = await fetch("/api/reports", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId, period: period.toISOString() }),
+    });
+
+    if (!createRes.ok) {
+      setMessage("Erro ao criar relatório");
+      setLoading(false);
+      return;
+    }
+
+    const report = await createRes.json();
+
+    // Disparar geração
+    const genRes = await fetch(`/api/reports/${report.id}/generate`, {
+      method: "POST",
+    });
+
+    setLoading(false);
+    setMessage(genRes.ok ? "Pipeline disparado! Acompanhe em Relatórios." : "Erro ao disparar geração");
+  }
+
+  return (
+    <div>
+      <Button onClick={handleGenerate} disabled={loading}>
+        {loading ? "Gerando..." : "Gerar Relatório (mês anterior)"}
+      </Button>
+      {message && <p className="text-sm mt-2 text-muted-foreground">{message}</p>}
+    </div>
+  );
+}
+```
+
+Actualizar `src/app/api/reports/route.ts` para aceitar POST (criar report):
+
+Adicionar ao ficheiro existente:
+
+```typescript
+export async function POST(request: Request) {
+  const agencyId = process.env.AGENCY_ID;
+  if (!agencyId) {
+    return NextResponse.json({ error: "AGENCY_ID not configured" }, { status: 500 });
+  }
+  const body = await request.json();
+  const { clientId, period } = body;
+  if (!clientId || !period) {
+    return NextResponse.json({ error: "clientId and period required" }, { status: 400 });
+  }
+  const report = await db.report.upsert({
+    where: { clientId_period: { clientId, period: new Date(period) } },
+    create: { clientId, agencyId, period: new Date(period), status: "PENDING" },
+    update: { status: "PENDING", errorMessage: null },
+  });
+  return NextResponse.json(report);
+}
+```
+
+Renderizar o botão na página do cliente, acima dos relatórios.
 
 ---
 
@@ -509,9 +918,16 @@ npm run build
 npm run test
 ```
 
-O build DEVE compilar sem erros de TypeScript.
-Os testes DEVEM passar.
+O build DEVE compilar sem erros.
+Os testes DEVEM passar (5 testes de crypto + 6 de calcVariation + 3 todo placeholders).
 
-**NÃO alterar nenhum ficheiro que não esteja listado neste documento.**
-**NÃO criar ficheiros fora da estrutura definida na secção 4 do `ARCHITECTURE.md`.**
-**NÃO modificar o `prisma/schema.prisma`.**
+Depois, para o teste E2E real:
+1. Configurar `.env.local` com credenciais reais (Neon DB, ENCRYPTION_KEY, AGENCY_ID)
+2. Executar `npm run db:push && npm run db:seed`
+3. Executar `npm run dev`
+4. Fazer login com `admin@metria.com` / `admin123`
+5. Ir a um cliente e configurar tokens OAuth reais
+6. Clicar "Gerar Relatório" e acompanhar o status
+
+**NÃO alterar ficheiros do pipeline (`src/lib/pipeline/*`, `src/lib/integrations/*`).**
+**NÃO alterar o `prisma/schema.prisma`.**
