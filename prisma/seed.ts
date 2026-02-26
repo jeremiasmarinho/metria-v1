@@ -4,9 +4,14 @@ import { hash } from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  const agencyId = process.env.AGENCY_ID;
+  if (!agencyId) {
+    throw new Error("AGENCY_ID must be set in .env.local before running seed");
+  }
   const agency = await prisma.agency.upsert({
     where: { slug: "metria-agencia" },
     create: {
+      id: agencyId,
       name: "Metria Agência",
       slug: "metria-agencia",
     },
@@ -60,7 +65,7 @@ async function main() {
     update: {},
   });
 
-  console.log("Seed completed: Agency, User, 2 Clients");
+  console.log("Seed completed: Agency", agency.id, ", User, 2 Clients");
 }
 
 main()
