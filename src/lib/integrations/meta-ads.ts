@@ -28,6 +28,12 @@ export async function fetchMetaAdsMetrics(options: FetchOptions): Promise<MetaAd
     if (response.status === 429) {
       throw new Error("META_RATE_LIMIT");
     }
+    if (response.status === 401) {
+      throw new Error("META_AUTH_401");
+    }
+    if (response.status === 403) {
+      throw new Error("META_AUTH_403");
+    }
     throw new Error(`Meta Ads API error: ${response.status} ${await response.text()}`);
   }
 

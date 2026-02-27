@@ -31,9 +31,10 @@ async function runPipelineForClient(clientId: string, agencyId: string, period: 
 
   try {
     await updateStatus("INGESTING");
+    let ingestResult: Awaited<ReturnType<typeof ingestClientMetrics>> | null = null;
     for (let attempt = 0; attempt <= MAX_INGEST_RETRIES; attempt++) {
       try {
-        await ingestClientMetrics(clientId, agencyId, period);
+        ingestResult = await ingestClientMetrics(clientId, agencyId, period);
         break;
       } catch (err) {
         const isRateLimit =
@@ -48,6 +49,22 @@ async function runPipelineForClient(clientId: string, agencyId: string, period: 
         }
         throw err;
       }
+    }
+
+    if (!ingestResult) {
+      throw new Error("INGEST_RESULT_MISSING");
+    }
+
+    const hasSuccess = ingestResult.successfulSources.length > 0;
+    const hasFailures = ingestResult.failedSources.length > 0;
+    const partialReason = hasFailures
+      ? `PARTIAL_INGEST:${ingestResult.failedSources
+          .map((f) => `${f.source}:${f.reason}`)
+          .join(",")}`
+      : null;
+
+    if (!hasSuccess && hasFailures) {
+      throw new Error(partialReason ?? "INGEST_NO_VALID_SOURCES");
     }
 
     await updateStatus("PROCESSING");
@@ -89,7 +106,11 @@ async function runPipelineForClient(clientId: string, agencyId: string, period: 
 
     await db.report.update({
       where: { id: report.id },
-      data: { status: "COMPLETED", sentAt: new Date() },
+      data: {
+        status: hasFailures ? "PARTIAL" : "COMPLETED",
+        errorMessage: partialReason,
+        sentAt: new Date(),
+      },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

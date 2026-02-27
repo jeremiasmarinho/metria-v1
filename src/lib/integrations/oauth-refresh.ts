@@ -93,8 +93,6 @@ export async function ensureFreshGoogleTokens(
 
 export function assertMetaTokenValid(expiresAt: number): void {
   if (expiresAt < Date.now()) {
-    throw new Error(
-      "Meta Ads token expired. Re-authenticate manually."
-    );
+    throw new Error("META_TOKEN_EXPIRED");
   }
 }

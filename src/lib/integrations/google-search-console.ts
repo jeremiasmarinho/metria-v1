@@ -34,6 +34,12 @@ export async function fetchSearchConsoleMetrics(
     if (response.status === 429) {
       throw new Error("GSC_RATE_LIMIT");
     }
+    if (response.status === 401) {
+      throw new Error("GSC_AUTH_401");
+    }
+    if (response.status === 403) {
+      throw new Error("GSC_AUTH_403");
+    }
     throw new Error(`Search Console API error: ${response.status} ${await response.text()}`);
   }
 

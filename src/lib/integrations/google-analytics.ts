@@ -40,6 +40,12 @@ export async function fetchGoogleAnalyticsMetrics(
     if (response.status === 429) {
       throw new Error("GA_RATE_LIMIT");
     }
+    if (response.status === 401) {
+      throw new Error("GA_AUTH_401");
+    }
+    if (response.status === 403) {
+      throw new Error("GA_AUTH_403");
+    }
     throw new Error(`Google Analytics API error: ${response.status} ${await response.text()}`);
   }
 

@@ -6,6 +6,7 @@ import { MetricsTable } from "./components/metrics-table";
 import { ExecutiveSummary } from "./components/executive-summary";
 import { ChartImage } from "./components/chart-image";
 import { styles } from "./styles";
+import { truncateText } from "./utils";
 
 interface ReportTemplateProps {
   clientName: string;
@@ -36,6 +37,12 @@ export function ReportTemplate({
   }
   if (processed.searchConsole) {
     const sc = processed.searchConsole;
+    const topQueries = [...(sc.queries ?? [])]
+      .sort((a, b) => (b.clicks ?? 0) - (a.clicks ?? 0))
+      .slice(0, 5);
+    const remainingQueries = (sc.queries ?? []).slice(5);
+    const othersClicks = remainingQueries.reduce((sum, q) => sum + (q.clicks ?? 0), 0);
+
     rows.push(
       {
         label: "Cliques (GSC)",
@@ -48,6 +55,20 @@ export function ReportTemplate({
         variation: sc.variation?.totalImpressions,
       }
     );
+
+    topQueries.forEach((query, index) => {
+      rows.push({
+        label: `Top Query #${index + 1}: ${truncateText(query.query ?? "—", 40)}`,
+        value: query.clicks ?? 0,
+      });
+    });
+
+    if (remainingQueries.length > 0) {
+      rows.push({
+        label: "Outros (queries)",
+        value: othersClicks,
+      });
+    }
   }
   if (processed.metaAds) {
     const ma = processed.metaAds;
@@ -66,9 +87,7 @@ export function ReportTemplate({
         {chartImages.map((src, i) => (
           <ChartImage key={i} src={src} />
         ))}
-        {rows.length > 0 && (
-          <MetricsTable rows={rows} />
-        )}
+        <MetricsTable rows={rows} />
       </Page>
     </Document>
   );

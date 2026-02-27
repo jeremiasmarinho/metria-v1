@@ -64,7 +64,11 @@ describe("monthly-report pipeline integration", () => {
     } as never);
     vi.mocked(db.report.update).mockResolvedValue({} as never);
 
-    vi.mocked(ingestClientMetrics).mockResolvedValue(undefined as never);
+    vi.mocked(ingestClientMetrics).mockResolvedValue({
+      results: [{ source: "GOOGLE_ANALYTICS", status: "success" }],
+      successfulSources: ["GOOGLE_ANALYTICS"],
+      failedSources: [],
+    } as never);
     vi.mocked(processClientMetrics).mockResolvedValue({
       googleAnalytics: null,
       googleSearchConsole: null,
@@ -125,6 +129,33 @@ describe("monthly-report pipeline integration", () => {
     expect(failedUpdate?.[0].data).toMatchObject({
       status: "FAILED",
       errorMessage: "OpenAI timeout",
+    });
+  });
+
+  it("graceful degradation: marks report as PARTIAL when Google fails but Meta succeeds", async () => {
+    vi.mocked(ingestClientMetrics).mockResolvedValue({
+      results: [
+        { source: "GOOGLE_ANALYTICS", status: "error", reason: "GA_AUTH_403" },
+        { source: "META_ADS", status: "success" },
+      ],
+      successfulSources: ["META_ADS"],
+      failedSources: [{ source: "GOOGLE_ANALYTICS", reason: "GA_AUTH_403" }],
+    } as never);
+
+    const step = {
+      run: vi.fn(async (_id: string, fn: () => Promise<unknown>) => fn()),
+    };
+
+    await expect(monthlyReport.fn({ step } as never)).resolves.toEqual({ processed: 1 });
+
+    const partialUpdate = vi.mocked(db.report.update).mock.calls.find(
+      ([arg]) => arg.data?.status === "PARTIAL"
+    );
+
+    expect(partialUpdate).toBeDefined();
+    expect(partialUpdate?.[0].data).toMatchObject({
+      status: "PARTIAL",
+      errorMessage: "PARTIAL_INGEST:GOOGLE_ANALYTICS:GA_AUTH_403",
     });
   });
 });
