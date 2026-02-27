@@ -86,7 +86,7 @@ export function ClientForm({ defaultValues, onSubmit }: ClientFormProps) {
             id="active"
             checked={active}
             onChange={(e) => setActive(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            className="h-4 w-4 rounded border-border/80 bg-background shadow-sm transition-all duration-200 ease-in-out accent-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2"
           />
           <Label htmlFor="active" className="font-normal cursor-pointer">
             Ativo (recebe relatórios mensais)

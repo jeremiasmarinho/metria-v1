@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ChevronRight, Command, Menu } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { openCommandPalette } from "@/lib/ui-feedback";
 
 interface HeaderProps {
@@ -18,7 +17,7 @@ export function Header({ title, breadcrumbs, onMenuClick }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 bg-transparent px-4 pt-4 md:px-8">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between rounded-2xl border border-border/60 bg-background/80 px-4 shadow-lg backdrop-blur-xl">
+      <div className="app-glass-blue mx-auto flex h-16 w-full max-w-7xl items-center justify-between rounded-2xl px-4">
         <div className="flex items-center gap-3">
         {onMenuClick && (
           <button
@@ -62,13 +61,14 @@ export function Header({ title, breadcrumbs, onMenuClick }: HeaderProps) {
             K
           </button>
           <span className="hidden text-sm capitalize text-muted-foreground sm:inline">{today}</span>
-          <Badge
-            variant="outline"
-            className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 shadow-none transition-all duration-300 ease-in-out dark:text-emerald-400"
-          >
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-green-500" />
-            <span className="hidden sm:inline">Operação </span>online
-          </Badge>
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 shadow-none transition-all duration-300 ease-in-out dark:text-emerald-300">
+            <span className="relative inline-flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/70" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            </span>
+            <span className="hidden sm:inline">Tudo operacional</span>
+            <span className="sm:hidden">Online</span>
+          </div>
         </div>
       </div>
     </header>

@@ -73,8 +73,10 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image:
-      radial-gradient(circle at 12% 10%, hsl(221 83% 53% / 0.08), transparent 30%),
-      radial-gradient(circle at 88% 90%, hsl(262 83% 58% / 0.07), transparent 32%);
+      radial-gradient(circle at 8% 12%, rgba(56, 189, 248, 0.16), transparent 34%),
+      radial-gradient(circle at 85% 16%, rgba(96, 165, 250, 0.12), transparent 36%),
+      radial-gradient(circle at 82% 88%, rgba(59, 130, 246, 0.11), transparent 34%),
+      linear-gradient(180deg, rgba(226, 232, 240, 0.68), rgba(241, 245, 249, 0.9));
     background-attachment: fixed;
   }
 
@@ -86,9 +88,37 @@
   select {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
+
+  textarea,
+  select {
+    @apply rounded-xl border border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground/90 transition-all duration-300 ease-in-out;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.1),
+      0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  textarea:hover,
+  select:hover {
+    @apply border-primary/35;
+    box-shadow:
+      0 2px 6px rgba(59, 130, 246, 0.12),
+      0 12px 28px rgba(15, 23, 42, 0.1);
+  }
+
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply border-primary/45 ring-2 ring-primary/25;
+    box-shadow:
+      0 0 0 4px rgba(59, 130, 246, 0.12),
+      0 12px 30px rgba(15, 23, 42, 0.14);
+  }
 }
 
 @layer components {
+  .app-glass-blue {
+    @apply border border-sky-300/55 bg-[linear-gradient(180deg,rgba(241,245,249,0.84),rgba(226,232,240,0.76))] shadow-xl backdrop-blur-xl dark:border-sky-400/20 dark:bg-[linear-gradient(180deg,rgba(30,41,59,0.66),rgba(15,23,42,0.62))];
+  }
+
   .app-section {
     @apply rounded-2xl border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] shadow-lg backdrop-blur-sm;
   }
