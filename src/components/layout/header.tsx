@@ -66,7 +66,7 @@ export function Header({ title, breadcrumbs, onMenuClick }: HeaderProps) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/70" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
             </span>
-            <span className="hidden sm:inline">Tudo operacional</span>
+            <span className="hidden sm:inline">Online</span>
             <span className="sm:hidden">Online</span>
           </div>
         </div>

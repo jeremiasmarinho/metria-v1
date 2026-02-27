@@ -35,7 +35,7 @@ export default async function ClientsPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Clientes</h2>
           <p className="text-sm text-muted-foreground">
-            Gestão de contas, integrações e histórico de entregas — tudo em um só lugar.
+            Gestão de contas, integrações e histórico de entregas, tudo em um só lugar.
           </p>
         </div>
         <Link href="/clients/new">
