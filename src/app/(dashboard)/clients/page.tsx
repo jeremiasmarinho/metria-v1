@@ -29,12 +29,13 @@ export default async function ClientsPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <section className="app-section app-enter">
+        <div className="app-section-header">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Clientes</h2>
           <p className="text-sm text-muted-foreground">
-            Gerencie os clientes da sua agência e suas integrações.
+            Gestão de contas, integrações e histórico de entregas — tudo em um só lugar.
           </p>
         </div>
         <Link href="/clients/new">
@@ -43,8 +44,9 @@ export default async function ClientsPage() {
             Novo cliente
           </Button>
         </Link>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        </div>
+      </section>
+      <div className="app-enter app-enter-delay-1 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {clients.map((client) => {
           const integrations = client.integrations as Record<string, unknown> | null;
           const hasGoogle = !!integrations?.google;
@@ -67,14 +69,25 @@ export default async function ClientsPage() {
         })}
       </div>
       {clients.length === 0 && (
-        <div className="flex flex-col items-center rounded-2xl border border-dashed border-border/70 p-12 text-center text-muted-foreground shadow-sm transition-all duration-300 ease-in-out">
+        <div className="app-surface-subtle app-enter app-enter-delay-2 flex flex-col items-center border-dashed p-12 text-center text-muted-foreground">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted shadow-sm">
             <Plus className="h-6 w-6 text-muted-foreground" />
           </div>
           <p className="font-medium text-foreground">Nenhum cliente cadastrado</p>
-          <p className="text-sm mt-1 mb-4">Configure AGENCY_ID no .env e execute o seed, ou adicione um novo.</p>
+          <p className="text-sm mt-1 mb-4">
+            Comece adicionando seu primeiro cliente para centralizar dados e automatizar relatórios.
+          </p>
+          <div className="mb-5 w-full max-w-xs space-y-2">
+            <div className="app-skeleton h-3 w-full" />
+            <div className="app-skeleton h-3 w-5/6" />
+          </div>
           <Link href="/clients/new">
-            <Button variant="outline" className="rounded-xl transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-sm">Adicionar cliente</Button>
+            <Button
+              variant="outline"
+              className="rounded-xl transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              Adicionar cliente
+            </Button>
           </Link>
         </div>
       )}

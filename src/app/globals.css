@@ -62,7 +62,121 @@
     @apply border-border;
   }
 
+  html {
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at 12% 10%, hsl(221 83% 53% / 0.08), transparent 30%),
+      radial-gradient(circle at 88% 90%, hsl(262 83% 58% / 0.07), transparent 32%);
+    background-attachment: fixed;
+  }
+
+  a,
+  button,
+  [role="button"],
+  input,
+  textarea,
+  select {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+}
+
+@layer components {
+  .app-section {
+    @apply rounded-2xl border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.96))] shadow-lg backdrop-blur-sm;
+  }
+
+  .app-section-header {
+    @apply flex items-center justify-between border-b border-border/50 px-6 py-4;
+  }
+
+  .app-section-body {
+    @apply p-6;
+  }
+
+  .app-surface-subtle {
+    @apply rounded-xl border border-border/60 bg-muted/60 shadow-md;
+  }
+
+  .app-interactive {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl;
+  }
+
+  .app-table-shell {
+    @apply overflow-hidden rounded-xl border border-border/70 bg-card/70 shadow-inner;
+  }
+
+  .app-table-row {
+    @apply flex items-center justify-between border-b border-border/70 px-4 py-3 transition-all duration-200 hover:bg-primary/5 hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)];
+  }
+
+  .app-table-row:last-child {
+    @apply border-b-0;
+  }
+
+  .app-table-row-title {
+    @apply text-sm font-semibold text-foreground;
+  }
+
+  .app-table-row-subtitle {
+    @apply mt-0.5 text-xs text-muted-foreground;
+  }
+
+  .app-enter {
+    animation: app-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .app-enter-delay-1 {
+    animation-delay: 80ms;
+  }
+
+  .app-enter-delay-2 {
+    animation-delay: 140ms;
+  }
+
+  .app-enter-delay-3 {
+    animation-delay: 200ms;
+  }
+
+  .app-skeleton {
+    @apply relative overflow-hidden rounded-lg bg-muted/70;
+  }
+
+  .app-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.08),
+      transparent
+    );
+    animation: app-shimmer 1.4s infinite;
+  }
+}
+
+@keyframes app-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes app-shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }

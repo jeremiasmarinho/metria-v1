@@ -52,14 +52,14 @@ export default function LoginPage() {
 
           <div className="animate-in fade-in slide-in-from-bottom-4 max-w-xl space-y-5 duration-700">
             <h1 className="text-4xl font-semibold tracking-tight text-balance text-slate-200/90">
-              Decisoes mais rapidas. Relatorios mais inteligentes. Crescimento previsivel.
+              Decisões mais rápidas. Relatórios mais inteligentes. Crescimento previsível.
             </h1>
             
           </div>
 
           <div className="animate-in fade-in slide-in-from-bottom-4 inline-flex w-fit items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs text-slate-200 backdrop-blur-sm duration-700">
             <Quote className="h-3.5 w-3.5" />
-            Plataforma para operacao de marketing orientada por dados
+            Plataforma para operação de marketing orientada por dados
           </div>
         </div>
       </div>
@@ -76,7 +76,7 @@ export default function LoginPage() {
             </div>
             <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Bem-vindo de volta</h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Entre com suas credenciais para acessar o painel de inteligencia.
+              Entre com suas credenciais para acessar seu painel de performance.
             </p>
           </div>
 
@@ -135,7 +135,7 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-5 text-center text-xs text-zinc-500 dark:text-zinc-400 sm:text-left">
-            Acesso protegido por autenticacao e controle de sessao.
+            Acesso protegido por autenticação e controle de sessão.
           </p>
         </div>
       </div>

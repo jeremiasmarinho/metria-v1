@@ -31,7 +31,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
   return (
     <div>
       <div className="space-y-8">
-        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-border/70 bg-card p-6 shadow-sm transition-all duration-300 ease-in-out md:flex-row md:items-center">
+        <section className="app-section app-enter">
+          <div className="app-section-body flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">{client.name}</h1>
@@ -54,14 +55,15 @@ export default async function ClientDetailPage({ params }: PageProps) {
               )}
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
-                <span>Desde {client.createdAt.toLocaleDateString("pt-BR")}</span>
+                <span>Ativo desde {client.createdAt.toLocaleDateString("pt-BR")}</span>
               </div>
             </div>
           </div>
           <GenerateReportButton clientId={client.id} />
-        </div>
+          </div>
+        </section>
 
-        <Tabs defaultValue="reports" className="w-full">
+        <Tabs defaultValue="reports" className="app-enter app-enter-delay-1 w-full">
           <TabsList className="mb-8 grid w-full max-w-md grid-cols-3 rounded-xl">
             <TabsTrigger value="reports" className="flex items-center gap-2 transition-all duration-300 ease-in-out">
               <FileText className="h-4 w-4" />
@@ -79,16 +81,20 @@ export default async function ClientDetailPage({ params }: PageProps) {
           
           <TabsContent value="reports" className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Últimos Relatórios</h3>
+              <h3 className="text-lg font-medium">Últimos relatórios</h3>
             </div>
             
             {client.reports.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10 p-12 text-center shadow-sm transition-all duration-300 ease-in-out">
+              <div className="app-surface-subtle flex flex-col items-center justify-center border-dashed p-12 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mb-4 opacity-50" />
                 <h4 className="text-lg font-medium mb-1">Nenhum relatório gerado</h4>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Utilize o botão "Gerar Relatório" acima para criar o primeiro relatório deste cliente.
+                  Gere o primeiro relatório para consolidar performance e validar as integrações.
                 </p>
+                <div className="mt-5 w-full max-w-xs space-y-2">
+                  <div className="app-skeleton h-3 w-full" />
+                  <div className="app-skeleton h-3 w-4/6" />
+                </div>
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
@@ -115,35 +121,35 @@ export default async function ClientDetailPage({ params }: PageProps) {
           </TabsContent>
           
           <TabsContent value="info">
-            <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
+            <Card className="rounded-2xl border-border/70 shadow-md transition-all duration-300 ease-in-out">
               <CardHeader>
                 <CardTitle>Dados do Cliente</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6 text-sm">
-                  <div>
-                    <dt className="text-muted-foreground font-medium mb-1">Nome da Empresa</dt>
-                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.name}</dd>
+              <CardContent>
+                <dl className="app-table-shell text-sm">
+                  <div className="app-table-row flex-col items-start gap-1 sm:flex-row sm:items-center">
+                    <dt className="font-semibold text-foreground">Nome da Empresa</dt>
+                    <dd className="text-muted-foreground">{client.name}</dd>
                   </div>
-                  <div>
-                    <dt className="text-muted-foreground font-medium mb-1">Slug (Identificador)</dt>
-                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5 font-mono">{client.slug}</dd>
+                  <div className="app-table-row flex-col items-start gap-1 sm:flex-row sm:items-center">
+                    <dt className="font-semibold text-foreground">Slug (Identificador)</dt>
+                    <dd className="font-mono text-muted-foreground">{client.slug}</dd>
                   </div>
-                  <div>
-                    <dt className="text-muted-foreground font-medium mb-1">E-mail de Contato</dt>
-                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.email ?? "Não informado"}</dd>
+                  <div className="app-table-row flex-col items-start gap-1 sm:flex-row sm:items-center">
+                    <dt className="font-semibold text-foreground">E-mail de Contato</dt>
+                    <dd className="text-muted-foreground">{client.email ?? "Não informado"}</dd>
                   </div>
-                  <div>
-                    <dt className="text-muted-foreground font-medium mb-1">Telefone / WhatsApp</dt>
-                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.phone ?? "Não informado"}</dd>
+                  <div className="app-table-row flex-col items-start gap-1 sm:flex-row sm:items-center">
+                    <dt className="font-semibold text-foreground">Telefone / WhatsApp</dt>
+                    <dd className="text-muted-foreground">{client.phone ?? "Não informado"}</dd>
                   </div>
-                  <div>
-                    <dt className="text-muted-foreground font-medium mb-1">Data de Cadastro</dt>
-                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.createdAt.toLocaleString("pt-BR")}</dd>
+                  <div className="app-table-row flex-col items-start gap-1 sm:flex-row sm:items-center">
+                    <dt className="font-semibold text-foreground">Data de Cadastro</dt>
+                    <dd className="text-muted-foreground">{client.createdAt.toLocaleString("pt-BR")}</dd>
                   </div>
-                  <div>
-                    <dt className="text-muted-foreground font-medium mb-1">Última Atualização</dt>
-                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.updatedAt.toLocaleString("pt-BR")}</dd>
+                  <div className="app-table-row flex-col items-start gap-1 sm:flex-row sm:items-center">
+                    <dt className="font-semibold text-foreground">Última Atualização</dt>
+                    <dd className="text-muted-foreground">{client.updatedAt.toLocaleString("pt-BR")}</dd>
                   </div>
                 </dl>
               </CardContent>

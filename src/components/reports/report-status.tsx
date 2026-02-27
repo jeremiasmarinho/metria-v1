@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, Loader2, AlertCircle, Clock } from "lucide-react";
 
 const statusConfig: Record<string, { style: string; label: string; icon: React.ElementType }> = {
-  PENDING: { style: "bg-gray-100 text-gray-700 border-gray-200", label: "Pendente", icon: Clock },
+  PENDING: { style: "bg-gray-100 text-gray-700 border-gray-200", label: "Em fila", icon: Clock },
   INGESTING: { style: "bg-blue-100 text-blue-700 border-blue-200", label: "Coletando dados", icon: Loader2 },
   PROCESSING: { style: "bg-blue-100 text-blue-700 border-blue-200", label: "Processando", icon: Loader2 },
   ANALYZING: { style: "bg-blue-100 text-blue-700 border-blue-200", label: "Analisando", icon: Loader2 },
@@ -10,7 +10,7 @@ const statusConfig: Record<string, { style: string; label: string; icon: React.E
   STORING: { style: "bg-blue-100 text-blue-700 border-blue-200", label: "Armazenando", icon: Loader2 },
   DELIVERING: { style: "bg-blue-100 text-blue-700 border-blue-200", label: "Enviando", icon: Loader2 },
   COMPLETED: { style: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "Concluído", icon: CheckCircle2 },
-  FAILED: { style: "bg-red-100 text-red-700 border-red-200", label: "Falhou", icon: XCircle },
+  FAILED: { style: "bg-red-100 text-red-700 border-red-200", label: "Erro", icon: XCircle },
   PARTIAL: { style: "bg-amber-100 text-amber-700 border-amber-200", label: "Parcial", icon: AlertCircle },
 };
 

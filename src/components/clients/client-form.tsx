@@ -38,27 +38,27 @@ export function ClientForm({ defaultValues, onSubmit }: ClientFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Nome da Empresa</Label>
+          <Label htmlFor="name">Nome do cliente</Label>
           <Input
             id="name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ex: Acme Corp"
+            placeholder="Ex.: Grupo Aurora"
             required
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="slug">Identificador (Slug)</Label>
+          <Label htmlFor="slug">Identificador (slug)</Label>
           <Input
             id="slug"
             type="text"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="Ex: acme-corp"
+            placeholder="Ex.: grupo-aurora"
             required
           />
-          <p className="text-xs text-muted-foreground">Usado nas URLs e internamente.</p>
+          <p className="text-xs text-muted-foreground">Usado em URLs e automações internas.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">E-mail de Contato</Label>
@@ -67,7 +67,7 @@ export function ClientForm({ defaultValues, onSubmit }: ClientFormProps) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="contato@acme.com"
+            placeholder="contato@grupoaurora.com"
           />
         </div>
         <div className="space-y-2">
@@ -88,10 +88,17 @@ export function ClientForm({ defaultValues, onSubmit }: ClientFormProps) {
             onChange={(e) => setActive(e.target.checked)}
             className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
-          <Label htmlFor="active" className="font-normal cursor-pointer">Cliente ativo (recebe relatórios)</Label>
+          <Label htmlFor="active" className="font-normal cursor-pointer">
+            Ativo (recebe relatórios mensais)
+          </Label>
         </div>
       </div>
-      <Button type="submit" className="w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md">Salvar Cliente</Button>
+      <Button
+        type="submit"
+        className="w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+      >
+        Salvar cliente
+      </Button>
     </form>
   );
 }

@@ -21,8 +21,9 @@ export default async function ReportDetailPage({ params }: PageProps) {
 
   return (
     <div>
-      <div className="space-y-6 max-w-3xl">
-        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-border/70 bg-card p-6 shadow-sm transition-all duration-300 ease-in-out sm:flex-row sm:items-center">
+      <div className="max-w-3xl space-y-6">
+        <section className="app-section app-enter">
+          <div className="app-section-body flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="mb-2 text-2xl font-bold tracking-tight text-foreground">{report.client.name}</h1>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -51,10 +52,11 @@ export default async function ReportDetailPage({ params }: PageProps) {
               </a>
             )}
           </div>
-        </div>
+          </div>
+        </section>
 
         {report.errorMessage && (
-          <div className="flex gap-4 rounded-2xl border border-destructive/20 bg-destructive/10 p-5 shadow-sm transition-all duration-300 ease-in-out">
+          <div className="app-enter app-enter-delay-1 flex gap-4 rounded-2xl border border-destructive/20 bg-destructive/10 p-5 shadow-sm transition-all duration-300 ease-in-out">
             <AlertTriangle className="h-6 w-6 text-destructive shrink-0" />
             <div>
               <h3 className="font-semibold text-destructive mb-1">Falha na geração</h3>
@@ -63,7 +65,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           </div>
         )}
 
-        <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
+        <Card className="app-enter app-enter-delay-2 rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
           <CardHeader className="border-b bg-muted/30">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-500" />
@@ -79,7 +81,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground/60">
                   <Sparkles className="h-8 w-8 mb-3 opacity-20" />
-                  <p>Aguardando análise da inteligência artificial...</p>
+                  <p>Analisando os dados e preparando insights executivos...</p>
                 </div>
               )}
             </div>

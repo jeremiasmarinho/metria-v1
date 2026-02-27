@@ -13,15 +13,15 @@ export default function LandingPage() {
 
       <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col items-center justify-center px-6 py-20 text-center">
         <span className="animate-in fade-in slide-in-from-bottom-4 mb-6 inline-flex items-center rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm duration-700">
-          METRIA for Agencies
+          METRIA • Relatórios de Performance
         </span>
 
         <h1 className="animate-in fade-in slide-in-from-bottom-4 max-w-4xl text-balance text-4xl font-semibold tracking-tight text-white duration-700 sm:text-5xl lg:text-6xl">
-          Inteligencia de Marketing para Clinicas de Alto Padrao
+          Inteligência de Marketing para Agências
         </h1>
 
         <p className="animate-in fade-in slide-in-from-bottom-4 mt-6 max-w-2xl text-balance text-base text-slate-300 duration-700 sm:text-lg">
-          Automatize a coleta de Google e Meta Ads, gere analises com IA e entregue relatorios executivos em PDF com consistencia operacional.
+          Automatize a coleta de dados (GA4, Search Console e Meta Ads), gere análises com IA e entregue relatórios executivos em PDF com consistência operacional.
         </p>
 
         <div className="animate-in fade-in slide-in-from-bottom-4 mt-10 duration-700">
@@ -36,25 +36,25 @@ export default function LandingPage() {
         <div className="mt-16 grid w-full max-w-5xl animate-in fade-in slide-in-from-bottom-4 gap-4 duration-700 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 text-left shadow-sm backdrop-blur-sm">
             <Link2 className="mb-3 h-5 w-5 text-cyan-300" />
-            <h3 className="text-sm font-semibold tracking-tight text-white">Integracao Oficial Meta & Google</h3>
+            <h3 className="text-sm font-semibold tracking-tight text-white">Integrações oficiais (Google e Meta)</h3>
             <p className="mt-2 text-sm text-slate-300">
-              Conecte suas fontes de dados de marketing em um unico fluxo operacional.
+              Conecte suas fontes de dados em um único fluxo — do insight à entrega.
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 text-left shadow-sm backdrop-blur-sm">
             <FileText className="mb-3 h-5 w-5 text-indigo-300" />
-            <h3 className="text-sm font-semibold tracking-tight text-white">Geracao de PDFs em Segundos</h3>
+            <h3 className="text-sm font-semibold tracking-tight text-white">Relatórios executivos, prontos para enviar</h3>
             <p className="mt-2 text-sm text-slate-300">
-              Transforme dados em relatorios executivos prontos para envio em escala.
+              Transforme dados em narrativa: performance, oportunidades e próximos passos.
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 text-left shadow-sm backdrop-blur-sm">
             <ShieldCheck className="mb-3 h-5 w-5 text-emerald-300" />
-            <h3 className="text-sm font-semibold tracking-tight text-white">Arquitetura Segura</h3>
+            <h3 className="text-sm font-semibold tracking-tight text-white">Operação segura e resiliente</h3>
             <p className="mt-2 text-sm text-slate-300">
-              Pipeline resiliente com isolamento de credenciais e entrega confiavel multicanal.
+              Credenciais isoladas, pipeline resiliente e entrega multicanal com rastreabilidade.
             </p>
           </div>
         </div>

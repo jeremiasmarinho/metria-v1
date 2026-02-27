@@ -28,8 +28,8 @@ export function ClientCard({
   const initials = name.substring(0, 2).toUpperCase();
   
   return (
-    <Link href={`/clients/${id}`}>
-      <Card className="h-full cursor-pointer bg-card rounded-xl border border-border/50 shadow-sm transition-all duration-300 ease-out hover:shadow-md hover:border-primary/20 hover:-translate-y-[2px] flex flex-col">
+    <Link href={`/clients/${id}`} className="block">
+      <Card className="app-interactive flex h-full cursor-pointer flex-col rounded-xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.97))] shadow-md">
         <CardHeader className="pb-4 flex flex-row items-start justify-between space-y-0">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border border-primary/20 shadow-sm transition-all duration-300 ease-in-out">
@@ -38,8 +38,8 @@ export function ClientCard({
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-base font-semibold leading-tight text-foreground">{name}</CardTitle>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
+              <CardTitle className="text-base font-semibold leading-tight tracking-tight text-foreground">{name}</CardTitle>
+              <div className="mt-1 flex items-center text-xs text-muted-foreground">
                 {email ? (
                   <span className="flex items-center truncate max-w-[140px]">
                     <Mail className="mr-1 h-3 w-3" />
@@ -62,7 +62,7 @@ export function ClientCard({
             {active ? "Ativo" : "Inativo"}
           </Badge>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col justify-end">
+        <CardContent className="flex flex-1 flex-col justify-end">
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Integrações:</span>
@@ -90,15 +90,15 @@ export function ClientCard({
               </div>
             </div>
             
-            <div className="flex items-center justify-between text-sm border-t border-border/50 pt-3">
-              <span className="text-muted-foreground flex items-center">
+            <div className="flex items-center justify-between border-t border-border/50 pt-3 text-sm">
+              <span className="flex items-center text-muted-foreground">
                 <Calendar className="mr-1.5 h-3.5 w-3.5" />
                 Último relatório:
               </span>
               <span className="font-medium">
                 {lastReportDate 
                   ? new Date(lastReportDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
-                  : "Nenhum"}
+                  : "Ainda não gerado"}
               </span>
             </div>
           </div>

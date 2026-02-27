@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { notify } from "@/lib/ui-feedback";
 
 interface ClientIntegrationsProps {
   clientId: string;
@@ -66,7 +67,14 @@ export function ClientIntegrations({
       body: JSON.stringify(body),
     });
     setSaving(false);
-    setMessage(res.ok ? "Google salvo com sucesso" : "Erro ao salvar Google");
+    setMessage(res.ok ? "Integrações do Google atualizadas." : "Não foi possível salvar as integrações do Google.");
+    notify({
+      variant: res.ok ? "success" : "error",
+      title: res.ok ? "Google conectado" : "Erro ao salvar Google",
+      description: res.ok
+        ? "Configurações e credenciais foram salvas com segurança."
+        : "Revise os campos e tente novamente.",
+    });
   }
 
   async function saveMeta() {
@@ -89,7 +97,14 @@ export function ClientIntegrations({
       body: JSON.stringify(body),
     });
     setSaving(false);
-    setMessage(res.ok ? "Meta salvo com sucesso" : "Erro ao salvar Meta");
+    setMessage(res.ok ? "Integrações da Meta atualizadas." : "Não foi possível salvar as integrações da Meta.");
+    notify({
+      variant: res.ok ? "success" : "error",
+      title: res.ok ? "Meta conectada" : "Erro ao salvar Meta",
+      description: res.ok
+        ? "Configurações e credenciais foram salvas com segurança."
+        : "Revise os campos e tente novamente.",
+    });
   }
 
   return (
@@ -128,12 +143,12 @@ export function ClientIntegrations({
               </Badge>
             </div>
             <CardDescription>
-              Conecte o Google Analytics 4 e Search Console.
+              Conecte GA4 e Search Console para consolidar tráfego, aquisição e demanda orgânica.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="googlePropertyId">Property ID (GA4)</Label>
+              <Label htmlFor="googlePropertyId">ID da propriedade (GA4)</Label>
               <Input
                 id="googlePropertyId"
                 type="text"
@@ -143,7 +158,7 @@ export function ClientIntegrations({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="googleSiteUrl">Site URL (Search Console)</Label>
+              <Label htmlFor="googleSiteUrl">URL do site (Search Console)</Label>
               <Input
                 id="googleSiteUrl"
                 type="text"
@@ -153,14 +168,14 @@ export function ClientIntegrations({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="googleAccessToken">Access Token</Label>
+              <Label htmlFor="googleAccessToken">Token de acesso</Label>
               <div className="relative">
                 <Input
                   id="googleAccessToken"
                   type={showGoogleTokens ? "text" : "password"}
                   value={googleAccessToken}
                   onChange={(e) => setGoogleAccessToken(e.target.value)}
-                  placeholder={hasGoogle ? "••••••••••••••••••••••••" : "Cole o access token"}
+                  placeholder={hasGoogle ? "••••••••••••••••••••••••" : "Cole o token de acesso"}
                   className="pr-10"
                 />
                 <button 
@@ -173,14 +188,14 @@ export function ClientIntegrations({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="googleRefreshToken">Refresh Token</Label>
+              <Label htmlFor="googleRefreshToken">Token de atualização</Label>
               <div className="relative">
                 <Input
                   id="googleRefreshToken"
                   type={showGoogleTokens ? "text" : "password"}
                   value={googleRefreshToken}
                   onChange={(e) => setGoogleRefreshToken(e.target.value)}
-                  placeholder={hasGoogle ? "••••••••••••••••••••••••" : "Cole o refresh token"}
+                  placeholder={hasGoogle ? "••••••••••••••••••••••••" : "Cole o token de atualização"}
                   className="pr-10"
                 />
                 <button 
@@ -217,12 +232,12 @@ export function ClientIntegrations({
               </Badge>
             </div>
             <CardDescription>
-              Conecte a conta de anúncios do Facebook/Instagram.
+              Conecte Meta Ads para acompanhar investimento, alcance e eficiência de mídia.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="metaAdAccountId">Ad Account ID</Label>
+              <Label htmlFor="metaAdAccountId">ID da conta de anúncios</Label>
               <Input
                 id="metaAdAccountId"
                 type="text"
@@ -232,14 +247,14 @@ export function ClientIntegrations({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="metaAccessToken">Access Token</Label>
+              <Label htmlFor="metaAccessToken">Token de acesso</Label>
               <div className="relative">
                 <Input
                   id="metaAccessToken"
                   type={showMetaTokens ? "text" : "password"}
                   value={metaAccessToken}
                   onChange={(e) => setMetaAccessToken(e.target.value)}
-                  placeholder={hasMeta ? "••••••••••••••••••••••••" : "Cole o access token"}
+                  placeholder={hasMeta ? "••••••••••••••••••••••••" : "Cole o token de acesso"}
                   className="pr-10"
                 />
                 <button 

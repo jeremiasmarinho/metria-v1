@@ -21,7 +21,7 @@ export default function NewClientPage() {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      alert(err.error ?? "Erro ao criar cliente");
+      alert(err.error ?? "Não foi possível criar o cliente.");
       return;
     }
     const client = await res.json();
@@ -33,9 +33,9 @@ export default function NewClientPage() {
     <div className="max-w-2xl">
       <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
         <CardHeader>
-          <CardTitle>Adicionar Cliente</CardTitle>
+          <CardTitle>Novo cliente</CardTitle>
           <CardDescription>
-            Preencha os dados básicos do cliente. Você poderá configurar as integrações na próxima tela.
+            Cadastre a conta e, em seguida, conecte Google/Meta para ativar a automação de relatórios.
           </CardDescription>
         </CardHeader>
         <CardContent>

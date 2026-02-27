@@ -24,12 +24,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-border/40 bg-background/95">
-      <div className="flex h-16 items-center gap-3 px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-all duration-300 ease-in-out">
+    <aside className="flex h-full w-64 flex-col border-r border-zinc-800/80 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-100 shadow-2xl">
+      <div className="flex h-16 items-center gap-3 border-b border-zinc-800/70 px-6">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-md transition-all duration-300 ease-in-out">
           M
         </div>
-        <span className="text-lg font-semibold tracking-tight text-foreground">Metria</span>
+        <span className="text-lg font-semibold tracking-tight text-zinc-50">Metria</span>
       </div>
       <nav className="flex-1 space-y-1.5 p-4">
         {navItems.map((item) => {
@@ -43,31 +43,31 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm transition-colors",
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200",
                 isActive
-                  ? "bg-primary/10 text-primary font-medium rounded-lg"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg"
+                  ? "bg-primary/20 font-semibold text-primary-foreground shadow-sm ring-1 ring-primary/30"
+                  : "text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100"
               )}
             >
-              <item.icon className={cn("h-5 w-5", isActive ? "text-primary" : "")} />
+              <item.icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "")} />
               {item.label}
             </Link>
           );
         })}
       </nav>
-      <div className="p-4">
+      <div className="border-t border-zinc-800/70 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <Avatar className="h-9 w-9 border border-border/60 shadow-sm transition-all duration-300 ease-in-out">
-              <AvatarFallback className="bg-primary/10 text-primary font-medium">
+            <Avatar className="h-9 w-9 border border-zinc-700 shadow-md">
+              <AvatarFallback className="bg-primary/20 text-primary-foreground font-medium">
                 {getInitials(session?.user?.name)}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col overflow-hidden">
-              <span className="truncate text-sm font-medium text-foreground">
-                {session?.user?.name ?? "Utilizador"}
+              <span className="truncate text-sm font-medium text-zinc-100">
+                {session?.user?.name ?? "Usuário"}
               </span>
-              <span className="truncate text-xs text-muted-foreground">
+              <span className="truncate text-xs text-zinc-400">
                 {session?.user?.email ?? "—"}
               </span>
             </div>
@@ -75,7 +75,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
             title="Sair"
           >
             <LogOut className="h-4 w-4" />

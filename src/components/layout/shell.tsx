@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
+import { CommandPalette } from "./command-palette";
 
 export function Shell({
   children,
@@ -16,7 +17,7 @@ export function Shell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-zinc-100 dark:bg-zinc-950">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[1px] transition-all duration-300 ease-in-out md:hidden"
@@ -24,7 +25,7 @@ export function Shell({
         />
       )}
 
-      <div className="hidden md:flex">
+      <div className="hidden h-screen shrink-0 md:sticky md:top-0 md:flex">
         <Sidebar />
       </div>
 
@@ -36,14 +37,20 @@ export function Shell({
         <Sidebar onNavigate={() => setSidebarOpen(false)} />
       </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden bg-muted/20">
+      <div className="relative flex flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.12),transparent_38%)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(124,58,237,0.08),transparent_36%)]" />
+        <CommandPalette />
         <Header
           title={title}
           breadcrumbs={breadcrumbs}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         />
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-7xl p-6 md:p-10">{children}</div>
+        <main className="relative z-10 flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-7xl p-6 md:p-10">
+            <div className="rounded-2xl border border-border/70 bg-card/95 p-4 shadow-xl backdrop-blur-sm md:p-6">
+              {children}
+            </div>
+          </div>
         </main>
       </div>
     </div>

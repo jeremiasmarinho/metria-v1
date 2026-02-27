@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Zap, CheckCircle2, AlertCircle } from "lucide-react";
+import { notify } from "@/lib/ui-feedback";
 
 export function GenerateReportButton({ clientId }: { clientId: string }) {
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
 
   async function handleGenerate() {
     setLoading(true);
-    setStatus({ type: null, message: "Criando relatório..." });
+    setStatus({ type: null, message: "Preparando a execução do pipeline..." });
 
     try {
       const now = new Date();
@@ -26,7 +27,7 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
       });
 
       if (!createRes.ok) {
-        throw new Error("Erro ao criar relatório");
+        throw new Error("Não foi possível criar o relatório.");
       }
 
       const report = await createRes.json();
@@ -36,17 +37,29 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
       });
 
       if (!genRes.ok) {
-        throw new Error("Erro ao disparar geração");
+        throw new Error("Não foi possível iniciar a geração.");
       }
 
-      setStatus({ 
-        type: "success", 
-        message: "Pipeline disparado! Acompanhe na aba Relatórios." 
+      setStatus({
+        type: "success",
+        message: "Pipeline iniciado. Acompanhe o status na aba Relatórios.",
+      });
+      notify({
+        variant: "success",
+        title: "Geração iniciada",
+        description: "Estamos coletando dados e montando o relatório.",
+        actionLabel: "Abrir relatório",
+        actionHref: `/reports/${report.id}`,
       });
     } catch (error) {
       setStatus({ 
         type: "error", 
         message: error instanceof Error ? error.message : "Ocorreu um erro desconhecido." 
+      });
+      notify({
+        variant: "error",
+        title: "Falha ao gerar relatório",
+        description: error instanceof Error ? error.message : "Tente novamente em instantes.",
       });
     } finally {
       setLoading(false);
@@ -64,12 +77,12 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processando...
+            Iniciando...
           </>
         ) : (
           <>
             <Zap className="mr-2 h-4 w-4 fill-current text-amber-300" />
-            Gerar Relatório (mês anterior)
+            Gerar relatório do mês anterior
           </>
         )}
       </Button>

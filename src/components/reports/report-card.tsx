@@ -11,10 +11,10 @@ interface ReportCardProps {
 
 export function ReportCard({ id, clientName, period, status }: ReportCardProps) {
   return (
-    <Link href={`/reports/${id}`}>
-      <div className="group flex cursor-pointer items-center justify-between rounded-2xl border border-border/70 bg-card p-4 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md">
+    <Link href={`/reports/${id}`} className="block">
+      <div className="app-interactive group flex cursor-pointer items-center justify-between rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)/0.97))] p-4 shadow-md">
         <div className="flex flex-col gap-1.5">
-          <h3 className="text-base font-semibold leading-none text-foreground">{clientName}</h3>
+          <h3 className="text-base font-semibold leading-none tracking-tight text-foreground">{clientName}</h3>
           <div className="flex items-center text-sm text-muted-foreground">
             <Calendar className="mr-1.5 h-3.5 w-3.5" />
             {period}
