@@ -29,7 +29,7 @@ export function ClientCard({
   
   return (
     <Link href={`/clients/${id}`}>
-      <Card className="h-full cursor-pointer rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md flex flex-col">
+      <Card className="h-full cursor-pointer bg-card rounded-xl border border-border/50 shadow-sm transition-all duration-300 ease-out hover:shadow-md hover:border-primary/20 hover:-translate-y-[2px] flex flex-col">
         <CardHeader className="pb-4 flex flex-row items-start justify-between space-y-0">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border border-primary/20 shadow-sm transition-all duration-300 ease-in-out">
@@ -52,8 +52,12 @@ export function ClientCard({
             </div>
           </div>
           <Badge
-            variant={active ? "default" : "secondary"}
-            className={`transition-all duration-300 ease-in-out ${active ? "bg-emerald-500 hover:bg-emerald-600" : ""}`}
+            variant="outline"
+            className={`transition-all duration-300 ease-out ${
+              active
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                : "border-zinc-500/20 bg-zinc-500/10 text-zinc-600 dark:text-zinc-400"
+            }`}
           >
             {active ? "Ativo" : "Inativo"}
           </Badge>
@@ -65,20 +69,28 @@ export function ClientCard({
               <div className="flex gap-1.5">
                 <Badge
                   variant="outline"
-                  className={`transition-all duration-300 ease-in-out ${hasGoogle ? "border-blue-200 bg-blue-50 text-blue-700" : "text-muted-foreground opacity-50"}`}
+                  className={`transition-all duration-300 ease-out ${
+                    hasGoogle
+                      ? "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-400"
+                      : "border-zinc-500/20 bg-zinc-500/10 text-zinc-600 dark:text-zinc-400"
+                  }`}
                 >
                   Google
                 </Badge>
                 <Badge
                   variant="outline"
-                  className={`transition-all duration-300 ease-in-out ${hasMeta ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "text-muted-foreground opacity-50"}`}
+                  className={`transition-all duration-300 ease-out ${
+                    hasMeta
+                      ? "border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-400"
+                      : "border-zinc-500/20 bg-zinc-500/10 text-zinc-600 dark:text-zinc-400"
+                  }`}
                 >
                   Meta
                 </Badge>
               </div>
             </div>
             
-            <div className="flex items-center justify-between text-sm border-t pt-3">
+            <div className="flex items-center justify-between text-sm border-t border-border/50 pt-3">
               <span className="text-muted-foreground flex items-center">
                 <Calendar className="mr-1.5 h-3.5 w-3.5" />
                 Último relatório:

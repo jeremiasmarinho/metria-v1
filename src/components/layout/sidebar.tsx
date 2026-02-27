@@ -24,7 +24,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-border/50 bg-muted/30 backdrop-blur-sm">
+    <aside className="flex h-screen w-64 flex-col border-r border-border/40 bg-background/95">
       <div className="flex h-16 items-center gap-3 px-6">
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-all duration-300 ease-in-out">
           M
@@ -43,10 +43,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300 ease-in-out",
+                "flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm transition-colors",
                 isActive
-                  ? "bg-primary/10 text-primary shadow-sm"
-                  : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                  ? "bg-primary/10 text-primary font-medium rounded-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg"
               )}
             >
               <item.icon className={cn("h-5 w-5", isActive ? "text-primary" : "")} />
@@ -75,7 +75,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="rounded-xl p-2 text-muted-foreground transition-all duration-300 ease-in-out hover:bg-primary/10 hover:text-primary"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
             title="Sair"
           >
             <LogOut className="h-4 w-4" />

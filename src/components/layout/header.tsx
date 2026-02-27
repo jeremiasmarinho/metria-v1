@@ -16,7 +16,7 @@ export function Header({ title, breadcrumbs, onMenuClick }: HeaderProps) {
   });
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border/50 bg-background/80 px-4 backdrop-blur-md md:px-8">
+    <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl md:px-8">
       <div className="flex items-center gap-3">
         {onMenuClick && (
           <button
@@ -50,10 +50,11 @@ export function Header({ title, breadcrumbs, onMenuClick }: HeaderProps) {
         )}
       </div>
       <div className="flex items-center gap-4">
+        <span className="hidden h-5 w-px bg-border/50 sm:inline-block" />
         <span className="hidden text-sm capitalize text-muted-foreground sm:inline">{today}</span>
         <Badge
           variant="outline"
-          className="border-green-200 bg-green-50 text-green-700 shadow-sm transition-all duration-300 ease-in-out hover:bg-green-50"
+          className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 shadow-none transition-all duration-300 ease-in-out dark:text-emerald-400"
         >
           <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-green-500" />
           <span className="hidden sm:inline">Sistema </span>Online

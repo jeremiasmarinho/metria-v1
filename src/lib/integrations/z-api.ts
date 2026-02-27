@@ -2,6 +2,7 @@ const ZAPI_BASE = "https://api.z-api.io";
 
 interface ZApiHealthResponse {
   connected?: boolean;
+  smartphoneConnected?: boolean;
   session?: string;
   error?: string;
   message?: string;
@@ -31,8 +32,10 @@ export async function checkZApiHealth(): Promise<boolean> {
 
   if (!response.ok) return false;
   const data = (await response.json()) as ZApiHealthResponse;
+  // Some Z-API accounts return `error: "You are already connected."` even when healthy.
+  if (data.connected || data.smartphoneConnected) return true;
   if (data.error) return false;
-  return Boolean(data.connected);
+  return false;
 }
 
 export async function sendWhatsAppMessage(

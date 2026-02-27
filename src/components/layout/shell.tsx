@@ -16,7 +16,7 @@ export function Shell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-muted/20">
+    <div className="flex min-h-screen bg-background">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[1px] transition-all duration-300 ease-in-out md:hidden"
@@ -36,13 +36,15 @@ export function Shell({
         <Sidebar onNavigate={() => setSidebarOpen(false)} />
       </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden bg-muted/20">
         <Header
           title={title}
           breadcrumbs={breadcrumbs}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-7xl p-6 md:p-10">{children}</div>
+        </main>
       </div>
     </div>
   );
