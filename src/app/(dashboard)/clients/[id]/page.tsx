@@ -31,11 +31,11 @@ export default async function ClientDetailPage({ params }: PageProps) {
   return (
     <div>
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border rounded-xl p-6 shadow-sm">
+        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-border/70 bg-card p-6 shadow-sm transition-all duration-300 ease-in-out md:flex-row md:items-center">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold tracking-tight">{client.name}</h1>
-              <Badge variant={client.active ? "default" : "secondary"} className={client.active ? "bg-emerald-500 hover:bg-emerald-600" : ""}>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">{client.name}</h1>
+              <Badge variant={client.active ? "default" : "secondary"} className={`transition-all duration-300 ease-in-out ${client.active ? "bg-emerald-500 hover:bg-emerald-600" : ""}`}>
                 {client.active ? "Ativo" : "Inativo"}
               </Badge>
             </div>
@@ -62,16 +62,16 @@ export default async function ClientDetailPage({ params }: PageProps) {
         </div>
 
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3 mb-8">
-            <TabsTrigger value="reports" className="flex items-center gap-2">
+          <TabsList className="mb-8 grid w-full max-w-md grid-cols-3 rounded-xl">
+            <TabsTrigger value="reports" className="flex items-center gap-2 transition-all duration-300 ease-in-out">
               <FileText className="h-4 w-4" />
               Relatórios
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="flex items-center gap-2">
+            <TabsTrigger value="integrations" className="flex items-center gap-2 transition-all duration-300 ease-in-out">
               <Settings className="h-4 w-4" />
               Integrações
             </TabsTrigger>
-            <TabsTrigger value="info" className="flex items-center gap-2">
+            <TabsTrigger value="info" className="flex items-center gap-2 transition-all duration-300 ease-in-out">
               <Info className="h-4 w-4" />
               Informações
             </TabsTrigger>
@@ -83,7 +83,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
             </div>
             
             {client.reports.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-12 text-center flex flex-col items-center justify-center bg-muted/10">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10 p-12 text-center shadow-sm transition-all duration-300 ease-in-out">
                 <FileText className="h-10 w-10 text-muted-foreground mb-4 opacity-50" />
                 <h4 className="text-lg font-medium mb-1">Nenhum relatório gerado</h4>
                 <p className="text-sm text-muted-foreground max-w-sm">
@@ -115,7 +115,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
           </TabsContent>
           
           <TabsContent value="info">
-            <Card>
+            <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
               <CardHeader>
                 <CardTitle>Dados do Cliente</CardTitle>
               </CardHeader>
@@ -123,27 +123,27 @@ export default async function ClientDetailPage({ params }: PageProps) {
                 <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6 text-sm">
                   <div>
                     <dt className="text-muted-foreground font-medium mb-1">Nome da Empresa</dt>
-                    <dd className="bg-muted/50 p-2.5 rounded-md border">{client.name}</dd>
+                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.name}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground font-medium mb-1">Slug (Identificador)</dt>
-                    <dd className="bg-muted/50 p-2.5 rounded-md border font-mono">{client.slug}</dd>
+                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5 font-mono">{client.slug}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground font-medium mb-1">E-mail de Contato</dt>
-                    <dd className="bg-muted/50 p-2.5 rounded-md border">{client.email ?? "Não informado"}</dd>
+                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.email ?? "Não informado"}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground font-medium mb-1">Telefone / WhatsApp</dt>
-                    <dd className="bg-muted/50 p-2.5 rounded-md border">{client.phone ?? "Não informado"}</dd>
+                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.phone ?? "Não informado"}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground font-medium mb-1">Data de Cadastro</dt>
-                    <dd className="bg-muted/50 p-2.5 rounded-md border">{client.createdAt.toLocaleString("pt-BR")}</dd>
+                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.createdAt.toLocaleString("pt-BR")}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground font-medium mb-1">Última Atualização</dt>
-                    <dd className="bg-muted/50 p-2.5 rounded-md border">{client.updatedAt.toLocaleString("pt-BR")}</dd>
+                    <dd className="rounded-xl border border-border/70 bg-muted/50 p-2.5">{client.updatedAt.toLocaleString("pt-BR")}</dd>
                   </div>
                 </dl>
               </CardContent>

@@ -59,7 +59,7 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
         onClick={handleGenerate} 
         disabled={loading}
         size="lg"
-        className="font-medium shadow-sm"
+        className="font-medium rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
       >
         {loading ? (
           <>
@@ -75,10 +75,10 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
       </Button>
       
       {status.type && (
-        <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-md ${
+        <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm shadow-sm transition-all duration-300 ease-in-out ${
           status.type === "success" 
-            ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
-            : "bg-destructive/10 text-destructive border border-destructive/20"
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700" 
+            : "border-destructive/20 bg-destructive/10 text-destructive"
         }`}>
           {status.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           {status.message}

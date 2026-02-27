@@ -19,7 +19,7 @@ export function Shell({
     <div className="flex min-h-screen bg-muted/20">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[1px] transition-all duration-300 ease-in-out md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -29,7 +29,7 @@ export function Shell({
       </div>
 
       <div
-        className={`fixed inset-y-0 left-0 z-40 transform transition-transform duration-200 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -42,7 +42,7 @@ export function Shell({
           breadcrumbs={breadcrumbs}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

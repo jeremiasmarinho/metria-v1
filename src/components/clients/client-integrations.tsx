@@ -95,7 +95,7 @@ export function ClientIntegrations({
   return (
     <div className="space-y-6">
       {message && (
-        <div className={`p-4 rounded-md flex items-center gap-3 ${
+        <div className={`flex items-center gap-3 rounded-xl p-4 shadow-sm transition-all duration-300 ease-in-out ${
           message.includes("Erro") 
             ? "bg-destructive/10 text-destructive border border-destructive/20" 
             : "bg-emerald-50 text-emerald-700 border border-emerald-200"
@@ -107,7 +107,7 @@ export function ClientIntegrations({
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Google Card */}
-        <Card>
+        <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export function ClientIntegrations({
                 </svg>
                 <CardTitle className="text-lg">Google</CardTitle>
               </div>
-              <Badge variant="outline" className={hasGoogle ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-muted text-muted-foreground"}>
+              <Badge variant="outline" className={`transition-all duration-300 ease-in-out ${hasGoogle ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-muted text-muted-foreground"}`}>
                 {hasGoogle ? (
                   <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurado</>
                 ) : (
@@ -166,7 +166,7 @@ export function ClientIntegrations({
                 <button 
                   type="button" 
                   onClick={() => setShowGoogleTokens(!showGoogleTokens)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
                 >
                   {showGoogleTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -186,20 +186,20 @@ export function ClientIntegrations({
                 <button 
                   type="button" 
                   onClick={() => setShowGoogleTokens(!showGoogleTokens)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
                 >
                   {showGoogleTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            <Button onClick={saveGoogle} disabled={saving} className="w-full mt-2">
+            <Button onClick={saveGoogle} disabled={saving} className="mt-2 w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md">
               {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : "Salvar Google"}
             </Button>
           </CardContent>
         </Card>
 
         {/* Meta Card */}
-        <Card>
+        <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -208,7 +208,7 @@ export function ClientIntegrations({
                 </svg>
                 <CardTitle className="text-lg">Meta Ads</CardTitle>
               </div>
-              <Badge variant="outline" className={hasMeta ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-muted text-muted-foreground"}>
+              <Badge variant="outline" className={`transition-all duration-300 ease-in-out ${hasMeta ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-muted text-muted-foreground"}`}>
                 {hasMeta ? (
                   <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurado</>
                 ) : (
@@ -245,13 +245,13 @@ export function ClientIntegrations({
                 <button 
                   type="button" 
                   onClick={() => setShowMetaTokens(!showMetaTokens)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
                 >
                   {showMetaTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            <Button onClick={saveMeta} disabled={saving} className="w-full mt-2">
+            <Button onClick={saveMeta} disabled={saving} className="mt-2 w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md">
               {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : "Salvar Meta"}
             </Button>
           </CardContent>

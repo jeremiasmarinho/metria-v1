@@ -25,15 +25,15 @@ export default async function ReportsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold tracking-tight">Relatórios</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">Relatórios</h2>
         <p className="text-sm text-muted-foreground">
           Histórico de relatórios gerados para todos os clientes.
         </p>
       </div>
       
       {reports.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center flex flex-col items-center justify-center bg-muted/10 max-w-3xl">
-          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+        <div className="flex max-w-3xl flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10 p-12 text-center shadow-sm transition-all duration-300 ease-in-out">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted shadow-sm">
             <FileText className="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 className="text-lg font-medium text-foreground mb-1">Nenhum relatório gerado</h3>

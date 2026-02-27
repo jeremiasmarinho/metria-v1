@@ -25,7 +25,13 @@ export function ReportStatus({ status, className }: ReportStatusProps) {
   const isSpinning = config.icon === Loader2;
 
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium", config.style, className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm transition-all duration-300 ease-in-out",
+        config.style,
+        className
+      )}
+    >
       <Icon className={cn("h-3.5 w-3.5", isSpinning && "animate-spin")} />
       {config.label}
     </span>

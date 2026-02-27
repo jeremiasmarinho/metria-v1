@@ -5,8 +5,8 @@ import type { NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const publicPaths = ["/login", "/api/auth", "/api/inngest", "/api/webhooks"];
-  const isPublic = publicPaths.some((p) => pathname.startsWith(p));
+  const publicPrefixes = ["/login", "/api/auth", "/api/inngest", "/api/webhooks"];
+  const isPublic = pathname === "/" || publicPrefixes.some((p) => pathname.startsWith(p));
   if (isPublic) return NextResponse.next();
 
   const token = await getToken({

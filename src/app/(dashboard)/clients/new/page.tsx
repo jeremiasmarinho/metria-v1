@@ -31,7 +31,7 @@ export default function NewClientPage() {
 
   return (
     <div className="max-w-2xl">
-      <Card>
+      <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
         <CardHeader>
           <CardTitle>Adicionar Cliente</CardTitle>
           <CardDescription>

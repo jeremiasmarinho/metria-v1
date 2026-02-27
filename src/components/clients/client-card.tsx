@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Mail, Phone } from "lucide-react";
+import { Calendar, Mail } from "lucide-react";
 
 interface ClientCardProps {
   id: string;
@@ -29,16 +29,16 @@ export function ClientCard({
   
   return (
     <Link href={`/clients/${id}`}>
-      <Card className="hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full flex flex-col">
+      <Card className="h-full cursor-pointer rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md flex flex-col">
         <CardHeader className="pb-4 flex flex-row items-start justify-between space-y-0">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-primary/10">
+            <Avatar className="h-10 w-10 border border-primary/20 shadow-sm transition-all duration-300 ease-in-out">
               <AvatarFallback className="bg-primary/5 text-primary font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-base font-semibold leading-tight">{name}</CardTitle>
+              <CardTitle className="text-base font-semibold leading-tight text-foreground">{name}</CardTitle>
               <div className="flex items-center text-xs text-muted-foreground mt-1">
                 {email ? (
                   <span className="flex items-center truncate max-w-[140px]">
@@ -51,7 +51,10 @@ export function ClientCard({
               </div>
             </div>
           </div>
-          <Badge variant={active ? "default" : "secondary"} className={active ? "bg-emerald-500 hover:bg-emerald-600" : ""}>
+          <Badge
+            variant={active ? "default" : "secondary"}
+            className={`transition-all duration-300 ease-in-out ${active ? "bg-emerald-500 hover:bg-emerald-600" : ""}`}
+          >
             {active ? "Ativo" : "Inativo"}
           </Badge>
         </CardHeader>
@@ -60,10 +63,16 @@ export function ClientCard({
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Integrações:</span>
               <div className="flex gap-1.5">
-                <Badge variant="outline" className={hasGoogle ? "border-blue-200 bg-blue-50 text-blue-700" : "text-muted-foreground opacity-50"}>
+                <Badge
+                  variant="outline"
+                  className={`transition-all duration-300 ease-in-out ${hasGoogle ? "border-blue-200 bg-blue-50 text-blue-700" : "text-muted-foreground opacity-50"}`}
+                >
                   Google
                 </Badge>
-                <Badge variant="outline" className={hasMeta ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "text-muted-foreground opacity-50"}>
+                <Badge
+                  variant="outline"
+                  className={`transition-all duration-300 ease-in-out ${hasMeta ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "text-muted-foreground opacity-50"}`}
+                >
                   Meta
                 </Badge>
               </div>

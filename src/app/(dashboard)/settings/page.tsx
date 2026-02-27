@@ -4,7 +4,10 @@ import { CheckCircle2, XCircle, Database, Key, Server, Mail, MessageCircle, Clou
 
 function StatusBadge({ isOk }: { isOk: boolean }) {
   return (
-    <Badge variant="outline" className={isOk ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-destructive/10 text-destructive border-destructive/20"}>
+    <Badge
+      variant="outline"
+      className={`transition-all duration-300 ease-in-out ${isOk ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-destructive/20 bg-destructive/10 text-destructive"}`}
+    >
       {isOk ? (
         <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurado</>
       ) : (
@@ -20,7 +23,7 @@ export default function SettingsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold tracking-tight">Configurações do Sistema</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">Configurações do Sistema</h2>
         <p className="text-sm text-muted-foreground">
           Verifique o status das integrações e variáveis de ambiente da agência.
         </p>
@@ -28,7 +31,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Infraestrutura */}
-        <Card>
+        <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Server className="h-5 w-5 text-primary" />
@@ -69,7 +72,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* APIs Externas */}
-        <Card>
+        <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Cloud className="h-5 w-5 text-primary" />
@@ -110,7 +113,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Entrega e Storage */}
-        <Card>
+        <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-primary" />

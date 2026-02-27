@@ -91,7 +91,7 @@ export function ClientForm({ defaultValues, onSubmit }: ClientFormProps) {
           <Label htmlFor="active" className="font-normal cursor-pointer">Cliente ativo (recebe relatórios)</Label>
         </div>
       </div>
-      <Button type="submit" className="w-full">Salvar Cliente</Button>
+      <Button type="submit" className="w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md">Salvar Cliente</Button>
     </form>
   );
 }

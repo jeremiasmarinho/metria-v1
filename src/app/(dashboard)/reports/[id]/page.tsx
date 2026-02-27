@@ -22,9 +22,9 @@ export default async function ReportDetailPage({ params }: PageProps) {
   return (
     <div>
       <div className="space-y-6 max-w-3xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border rounded-xl p-6 shadow-sm">
+        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-border/70 bg-card p-6 shadow-sm transition-all duration-300 ease-in-out sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight mb-2">{report.client.name}</h1>
+            <h1 className="mb-2 text-2xl font-bold tracking-tight text-foreground">{report.client.name}</h1>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span className="font-medium text-foreground">
                 {report.period.toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" })}
@@ -41,7 +41,10 @@ export default async function ReportDetailPage({ params }: PageProps) {
                 href={report.pdfUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(buttonVariants({ size: "lg" }), "shadow-sm")}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+                )}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Baixar PDF
@@ -51,7 +54,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
         </div>
 
         {report.errorMessage && (
-          <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-5 flex gap-4">
+          <div className="flex gap-4 rounded-2xl border border-destructive/20 bg-destructive/10 p-5 shadow-sm transition-all duration-300 ease-in-out">
             <AlertTriangle className="h-6 w-6 text-destructive shrink-0" />
             <div>
               <h3 className="font-semibold text-destructive mb-1">Falha na geração</h3>
@@ -60,8 +63,8 @@ export default async function ReportDetailPage({ params }: PageProps) {
           </div>
         )}
 
-        <Card>
-          <CardHeader className="bg-muted/30 border-b">
+        <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
+          <CardHeader className="border-b bg-muted/30">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-500" />
               <CardTitle>Análise Executiva</CardTitle>
