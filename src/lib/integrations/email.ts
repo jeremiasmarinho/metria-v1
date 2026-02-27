@@ -14,6 +14,17 @@ export async function sendReportEmail(options: {
     throw new Error("RESEND_API_KEY not configured");
   }
 
+  const pdfResponse = await fetch(pdfUrl);
+  if (!pdfResponse.ok) {
+    throw new Error(`Failed to fetch report PDF: ${pdfResponse.status} ${await pdfResponse.text()}`);
+  }
+
+  const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+  const pdfBuffer = Buffer.from(pdfArrayBuffer);
+  const safeClientName = clientName.replace(/[^\w-]+/g, "_");
+  const safePeriod = period.replace(/[^\w-]+/g, "_");
+  const filename = `Relatorio_${safeClientName}_${safePeriod}.pdf`;
+
   const from = process.env.EMAIL_FROM ?? "relatorios@metria.com";
 
   const { error } = await resend.emails.send({
@@ -23,10 +34,15 @@ export async function sendReportEmail(options: {
     html: `
       <p>Olá,</p>
       <p>Segue o relatório de marketing referente ao período ${period}.</p>
-      <p><a href="${pdfUrl}" target="_blank">Clique aqui para baixar o PDF</a></p>
-      <p>O link expira em 30 dias.</p>
+      <p>O relatório segue em anexo.</p>
       <p>Atenciosamente,<br/>Equipe Metria</p>
     `,
+    attachments: [
+      {
+        filename,
+        content: pdfBuffer,
+      },
+    ],
   });
 
   if (error) {

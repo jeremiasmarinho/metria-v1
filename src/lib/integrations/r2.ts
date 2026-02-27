@@ -5,7 +5,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const R2_URL_EXPIRATION_DAYS = 30;
+const R2_URL_EXPIRATION_SECONDS = 3600;
 
 function getR2Client(): S3Client | null {
   const accountId = process.env.R2_ACCOUNT_ID;
@@ -48,7 +48,7 @@ export async function getSignedPdfUrl(key: string): Promise<string | null> {
 
   const command = new GetObjectCommand({ Bucket: bucket, Key: key });
   const url = await getSignedUrl(client, command, {
-    expiresIn: R2_URL_EXPIRATION_DAYS * 24 * 60 * 60,
+    expiresIn: R2_URL_EXPIRATION_SECONDS,
   });
   return url;
 }

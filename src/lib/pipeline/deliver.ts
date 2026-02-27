@@ -22,7 +22,7 @@ export async function deliverReport(options: DeliverOptions): Promise<{
     const zApiHealthy = await checkZApiHealth();
     if (zApiHealthy) {
       try {
-        const message = `Relatório de marketing - ${clientName} - ${period}:\n${pdfUrl}`;
+        const message = `Olá! Segue o relatório de marketing da ${clientName} referente a ${period}.`;
         await sendWhatsAppMessage(phone, message, pdfUrl);
         whatsAppSent = true;
       } catch {
