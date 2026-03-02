@@ -54,7 +54,7 @@ export default async function ReportsPage() {
               key={report.id}
               id={report.id}
               clientName={report.client.name}
-              period={report.period.toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" })}
+              period={report.createdAt.toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" })}
               status={report.status}
             />
           ))}

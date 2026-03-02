@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Link2 } from "lucide-react";
 import { notify } from "@/lib/ui-feedback";
 
 interface ClientIntegrationsProps {
@@ -16,6 +17,8 @@ interface ClientIntegrationsProps {
     googleSiteUrl?: string;
     metaAdAccountId?: string;
   };
+  metaAdAccountId?: string | null;
+  googleAdsCustomerId?: string | null;
   hasGoogle: boolean;
   hasMeta: boolean;
 }
@@ -23,9 +26,12 @@ interface ClientIntegrationsProps {
 export function ClientIntegrations({
   clientId,
   reportConfig,
+  metaAdAccountId: initialMetaAdAccountId,
+  googleAdsCustomerId: initialGoogleAdsCustomerId,
   hasGoogle,
   hasMeta,
 }: ClientIntegrationsProps) {
+  const router = useRouter();
   const [googlePropertyId, setGooglePropertyId] = useState(
     reportConfig.googlePropertyId ?? ""
   );
@@ -36,9 +42,17 @@ export function ClientIntegrations({
   const [googleRefreshToken, setGoogleRefreshToken] = useState("");
 
   const [metaAdAccountId, setMetaAdAccountId] = useState(
-    reportConfig.metaAdAccountId ?? ""
+    initialMetaAdAccountId ?? reportConfig.metaAdAccountId ?? ""
   );
   const [metaAccessToken, setMetaAccessToken] = useState("");
+  const [googleAdsCustomerId, setGoogleAdsCustomerId] = useState(
+    initialGoogleAdsCustomerId ?? ""
+  );
+
+  const [linkModal, setLinkModal] = useState<"meta" | "google" | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [metaAccounts, setMetaAccounts] = useState<{ id: string; name: string }[]>([]);
+  const [googleAccounts, setGoogleAccounts] = useState<{ id: string; customerId: string; descriptiveName?: string }[]>([]);
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -51,6 +65,7 @@ export function ClientIntegrations({
     setMessage("");
     const body: Record<string, unknown> = {
       reportConfig: { ...reportConfig, googlePropertyId, googleSiteUrl },
+      googleAdsCustomerId: googleAdsCustomerId || null,
     };
     if (googleAccessToken && googleRefreshToken) {
       body.integrations = {
@@ -77,11 +92,84 @@ export function ClientIntegrations({
     });
   }
 
+  async function linkMetaAccount(accountId: string) {
+    setLinkLoading(true);
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metaAdAccountId: accountId,
+          reportConfig: { ...reportConfig, metaAdAccountId: accountId },
+        }),
+      });
+      if (!res.ok) throw new Error("Erro ao vincular");
+      setMetaAdAccountId(accountId);
+      setLinkModal(null);
+      router.refresh();
+      notify({ variant: "success", title: "Conta Meta vinculada", description: "A conta foi associada a este cliente." });
+    } catch {
+      notify({ variant: "error", title: "Erro", description: "Não foi possível vincular a conta." });
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
+  async function linkGoogleAccount(customerId: string) {
+    setLinkLoading(true);
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ googleAdsCustomerId: customerId }),
+      });
+      if (!res.ok) throw new Error("Erro ao vincular");
+      setGoogleAdsCustomerId(customerId);
+      setLinkModal(null);
+      router.refresh();
+      notify({ variant: "success", title: "Conta Google Ads vinculada", description: "A conta foi associada a este cliente." });
+    } catch {
+      notify({ variant: "error", title: "Erro", description: "Não foi possível vincular a conta." });
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
+  async function openLinkModal(provider: "meta" | "google") {
+    setLinkModal(provider);
+    setLinkLoading(true);
+    setMetaAccounts([]);
+    setGoogleAccounts([]);
+    try {
+      if (provider === "meta") {
+        const res = await fetch("/api/agency/connections/meta/accounts");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Erro ao listar");
+        setMetaAccounts(data.accounts ?? []);
+      } else {
+        const res = await fetch("/api/agency/connections/google/accounts");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Erro ao listar");
+        setGoogleAccounts(data.accounts ?? []);
+      }
+    } catch (err) {
+      notify({
+        variant: "error",
+        title: "Erro ao listar contas",
+        description: err instanceof Error ? err.message : "Tente novamente.",
+      });
+      setLinkModal(null);
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
   async function saveMeta() {
     setSaving(true);
     setMessage("");
     const body: Record<string, unknown> = {
       reportConfig: { ...reportConfig, metaAdAccountId },
+      metaAdAccountId: metaAdAccountId || null,
     };
     if (metaAccessToken) {
       body.integrations = {
@@ -143,10 +231,38 @@ export function ClientIntegrations({
               </Badge>
             </div>
             <CardDescription>
-              Conecte GA4 e Search Console para consolidar tráfego, aquisição e demanda orgânica.
+              Conecte GA4, Search Console e Google Ads (MCC) para consolidar tráfego e mídia.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="googleAdsCustomerId">Conta Google Ads (xxx-xxx-xxxx)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="googleAdsCustomerId"
+                  type="text"
+                  value={googleAdsCustomerId}
+                  onChange={(e) => setGoogleAdsCustomerId(e.target.value)}
+                  placeholder="123-456-7890"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openLinkModal("google")}
+                  disabled={linkLoading}
+                  className="shrink-0"
+                  title="Vincular conta da agência"
+                >
+                  {linkLoading && linkModal === "google" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <><Link2 className="mr-1 h-3.5 w-3.5" /> Vincular da agência</>
+                  )}
+                </Button>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="googlePropertyId">ID da propriedade (GA4)</Label>
               <Input
@@ -238,13 +354,31 @@ export function ClientIntegrations({
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="metaAdAccountId">ID da conta de anúncios</Label>
-              <Input
-                id="metaAdAccountId"
-                type="text"
-                value={metaAdAccountId}
-                onChange={(e) => setMetaAdAccountId(e.target.value)}
-                placeholder="act_123456789"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="metaAdAccountId"
+                  type="text"
+                  value={metaAdAccountId}
+                  onChange={(e) => setMetaAdAccountId(e.target.value)}
+                  placeholder="act_123456789"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openLinkModal("meta")}
+                  disabled={linkLoading}
+                  className="shrink-0"
+                  title="Vincular conta da agência"
+                >
+                  {linkLoading && linkModal === "meta" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <><Link2 className="mr-1 h-3.5 w-3.5" /> Vincular da agência</>
+                  )}
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="metaAccessToken">Token de acesso</Label>
@@ -272,6 +406,95 @@ export function ClientIntegrations({
           </CardContent>
         </Card>
       </div>
+
+      {linkModal && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/55"
+            onClick={() => setLinkModal(null)}
+            aria-label="Fechar"
+          />
+          <div className="relative max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl">
+            <div className="border-b border-border/70 p-4">
+              <h3 className="font-semibold">
+                {linkModal === "meta" ? "Vincular conta Meta" : "Vincular conta Google Ads"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Selecione a conta para associar a este cliente.
+              </p>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto p-4">
+              {linkLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : linkModal === "meta" ? (
+                metaAccounts.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    Nenhuma conta encontrada. Conecte a Meta na página de Configurações.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {metaAccounts.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 px-3 py-2"
+                      >
+                        <div>
+                          <p className="font-medium">{a.name}</p>
+                          <p className="text-xs text-muted-foreground">{a.id}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => linkMetaAccount(a.id)}
+                          disabled={linkLoading}
+                        >
+                          Vincular
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )
+              ) : googleAccounts.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  Nenhuma conta encontrada. Conecte o Google Ads na página de Configurações.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {googleAccounts.map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 px-3 py-2"
+                    >
+                      <div>
+                        <p className="font-medium">{a.descriptiveName ?? a.customerId}</p>
+                        <p className="text-xs text-muted-foreground">{a.customerId}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => linkGoogleAccount(a.customerId)}
+                        disabled={linkLoading}
+                      >
+                        Vincular
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="border-t border-border/70 p-4">
+              <Button variant="outline" size="sm" onClick={() => setLinkModal(null)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

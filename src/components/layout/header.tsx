@@ -47,7 +47,7 @@ export function Header({ title, breadcrumbs, onMenuClick }: HeaderProps) {
             ))}
           </nav>
         ) : (
-          <h1 className="text-lg font-semibold text-foreground">{title ?? "Metria"}</h1>
+          <h1 className="text-lg font-semibold text-foreground">{title ?? ""}</h1>
         )}
         </div>
         <div className="flex items-center gap-4">

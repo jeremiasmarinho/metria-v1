@@ -15,8 +15,9 @@ model Agency {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users   User[]
-  clients Client[]
+  users       User[]
+  clients     Client[]
+  connections AgencyConnection[]
 
   @@map("agencies")
 }
@@ -31,7 +32,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  agency Agency @relation(fields: [agencyId], references: [id])
+  agency            Agency             @relation(fields: [agencyId], references: [id])
+  agencyConnections AgencyConnection[]
 
   @@map("users")
 }
@@ -39,6 +41,36 @@ model User {
 enum UserRole {
   ADMIN
   ANALYST
+}
+
+enum OAuthProvider {
+  GOOGLE
+  META
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+}
+
+model AgencyConnection {
+  id           String           @id @default(cuid())
+  agencyId     String
+  provider     OAuthProvider
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  status       ConnectionStatus @default(CONNECTED)
+  connectedBy  String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [connectedBy], references: [id])
+
+  @@unique([agencyId, provider])
+  @@index([agencyId])
+  @@map("agency_connections")
 }
 
 model Client {
@@ -59,6 +91,9 @@ model Client {
   // JSONB: preferências de relatório do cliente
   // Formato: { logo?: string, primaryColor?: string, sections?: string[] }
   reportConfig Json @default("{}")
+
+  metaAdAccountId     String? // act_xxxxx - conta de anúncios Meta associada
+  googleAdsCustomerId String? // xxx-xxx-xxxx - conta Google Ads associada
 
   agency  Agency   @relation(fields: [agencyId], references: [id])
   metrics Metric[]

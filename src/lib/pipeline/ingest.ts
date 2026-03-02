@@ -10,6 +10,8 @@ import {
   assertMetaTokenValid,
 } from "@/lib/integrations/oauth-refresh";
 import type { MetricSource } from "@prisma/client";
+import { OAuthProvider } from "@prisma/client";
+import { markAgencyConnectionDisconnected } from "@/lib/agency-connection";
 
 function getMonthRange(period: Date): { start: string; end: string } {
   const start = new Date(period.getFullYear(), period.getMonth(), 1);
@@ -28,7 +30,9 @@ export type IngestSourceReason =
   | "META_AUTH_401"
   | "META_AUTH_403"
   | "META_TOKEN_EXPIRED"
+  | "META_TOKEN_INVALID"
   | "GOOGLE_TOKEN_REFRESH_FAILED"
+  | "GOOGLE_TOKEN_INVALID"
   | "UNKNOWN";
 
 export interface IngestSourceResult {
@@ -53,6 +57,8 @@ function mapSourceReason(err: unknown): IngestSourceReason | null {
   if (msg === "META_AUTH_401") return "META_AUTH_401";
   if (msg === "META_AUTH_403") return "META_AUTH_403";
   if (msg === "META_TOKEN_EXPIRED") return "META_TOKEN_EXPIRED";
+  if (msg === "META_TOKEN_INVALID") return "META_TOKEN_INVALID";
+  if (msg === "GOOGLE_TOKEN_INVALID") return "GOOGLE_TOKEN_INVALID";
   if (msg.startsWith("Google token refresh failed:")) return "GOOGLE_TOKEN_REFRESH_FAILED";
   return null;
 }
@@ -69,7 +75,11 @@ export async function ingestClientMetrics(
   const integrations = client.integrations as unknown as ClientIntegrations;
   const { start: startDate, end: endDate } = getMonthRange(period);
 
-  const sourcesToFetch: Array<{ source: MetricSource; fn: () => Promise<object> }> = [];
+  const sourcesToFetch: Array<{
+    source: MetricSource;
+    fn: () => Promise<object>;
+    onAuthError?: () => Promise<void>;
+  }> = [];
   const results: IngestSourceResult[] = [];
 
   if (integrations.google?.accessToken && integrations.google?.refreshToken) {
@@ -117,21 +127,44 @@ export async function ingestClientMetrics(
     }
   }
 
-  if (integrations.meta?.accessToken) {
+  const metaAdAccountId =
+    client.metaAdAccountId ??
+    (client.reportConfig as { metaAdAccountId?: string })?.metaAdAccountId;
+
+  if (metaAdAccountId) {
     try {
-      assertMetaTokenValid(integrations.meta.expiresAt);
-      const decryptedMetaToken = decrypt(integrations.meta.accessToken);
-      const reportConfig = client.reportConfig as { metaAdAccountId?: string };
-      if (reportConfig?.metaAdAccountId) {
+      let metaAccessToken: string | null = null;
+
+      if (integrations.meta?.accessToken) {
+        assertMetaTokenValid(integrations.meta.expiresAt);
+        metaAccessToken = decrypt(integrations.meta.accessToken);
+      } else {
+        const agencyConn = await db.agencyConnection.findFirst({
+          where: {
+            agencyId,
+            provider: OAuthProvider.META,
+            status: "CONNECTED",
+          },
+        });
+        if (agencyConn) {
+          metaAccessToken = decrypt(agencyConn.accessToken);
+        }
+      }
+
+      if (metaAccessToken) {
+        const usedAgencyConnection = !integrations.meta?.accessToken;
         sourcesToFetch.push({
           source: "META_ADS",
           fn: () =>
             fetchMetaAdsMetrics({
-              accessToken: decryptedMetaToken,
-              adAccountId: reportConfig.metaAdAccountId!,
+              accessToken: metaAccessToken!,
+              adAccountId: metaAdAccountId!,
               startDate,
               endDate,
             }),
+          onAuthError: usedAgencyConnection
+            ? () => markAgencyConnectionDisconnected(agencyId, OAuthProvider.META)
+            : undefined,
         });
       }
     } catch (err) {
@@ -140,7 +173,10 @@ export async function ingestClientMetrics(
     }
   }
 
-  for (const { source, fn } of sourcesToFetch) {
+  const META_AUTH_ERRORS = ["META_AUTH_401", "META_AUTH_403", "META_TOKEN_INVALID"];
+  const GOOGLE_AUTH_ERRORS = ["GOOGLE_TOKEN_INVALID", "GOOGLE_PERMISSION_DENIED"];
+
+  for (const { source, fn, onAuthError } of sourcesToFetch) {
     try {
       const data = await fn();
       await db.metric.upsert({
@@ -152,11 +188,13 @@ export async function ingestClientMetrics(
       });
       results.push({ source, status: "success" });
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "";
+
       if (
         err instanceof Error &&
-        (err.message === "GA_RATE_LIMIT" ||
-          err.message === "GSC_RATE_LIMIT" ||
-          err.message === "META_RATE_LIMIT")
+        (errMsg === "GA_RATE_LIMIT" ||
+          errMsg === "GSC_RATE_LIMIT" ||
+          errMsg === "META_RATE_LIMIT")
       ) {
         throw err;
       }
@@ -166,6 +204,16 @@ export async function ingestClientMetrics(
       ) {
         continue;
       }
+
+      if (onAuthError) {
+        const isAuthError =
+          (source === "META_ADS" && META_AUTH_ERRORS.includes(errMsg)) ||
+          (source === "GOOGLE_ANALYTICS" && GOOGLE_AUTH_ERRORS.includes(errMsg));
+        if (isAuthError) {
+          await onAuthError();
+        }
+      }
+
       const reason = mapSourceReason(err);
       if (reason) {
         results.push({ source, status: "error", reason });

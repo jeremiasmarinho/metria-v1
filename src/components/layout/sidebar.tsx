@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { LayoutDashboard, Users, FileText, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -17,6 +20,7 @@ const navItems = [
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const [confirmExitOpen, setConfirmExitOpen] = useState(false);
 
   const getInitials = (name?: string | null) => {
     if (!name) return "U";
@@ -74,7 +78,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => setConfirmExitOpen(true)}
             className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
             title="Sair"
           >
@@ -82,6 +86,61 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </button>
         </div>
       </div>
+
+      {confirmExitOpen &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/55"
+              onClick={() => setConfirmExitOpen(false)}
+              aria-label="Fechar confirmação de saída"
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="relative w-full max-w-md rounded-2xl border border-border/70 bg-card p-5 shadow-2xl"
+            >
+              <div className="mb-4 flex items-start gap-3">
+                <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
+                  <LogOut className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">
+                    Tem certeza que deseja sair?
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Você será desconectado do aplicativo e precisará fazer login novamente para acessar.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmExitOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    setConfirmExitOpen(false);
+                    signOut({ callbackUrl: "/login" });
+                  }}
+                >
+                  Sim, sair
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </aside>
   );
 }

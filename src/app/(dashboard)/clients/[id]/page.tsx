@@ -103,7 +103,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
                     key={report.id}
                     id={report.id}
                     clientName={client.name}
-                    period={report.period.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                    period={report.createdAt.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                     status={report.status}
                   />
                 ))}
@@ -115,6 +115,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
             <ClientIntegrations
               clientId={client.id}
               reportConfig={reportConfig}
+              metaAdAccountId={client.metaAdAccountId}
+              googleAdsCustomerId={client.googleAdsCustomerId}
               hasGoogle={!!integrations?.google}
               hasMeta={!!integrations?.meta}
             />

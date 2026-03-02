@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Database, Key, Server, Mail, MessageCircle, Cloud, Sparkles, Users } from "lucide-react";
+import { AgencyConnections } from "@/components/settings/agency-connections";
 
 function StatusBadge({ isOk }: { isOk: boolean }) {
   return (
@@ -30,6 +32,10 @@ export default function SettingsPage() {
         </p>
         </div>
       </section>
+
+      <Suspense fallback={null}>
+        <AgencyConnections />
+      </Suspense>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Infraestrutura */}

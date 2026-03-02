@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { z } from "zod";
 
@@ -14,24 +15,27 @@ const createClientSchema = z.object({
 });
 
 export async function GET() {
-  const agencyId = process.env.AGENCY_ID;
-  if (!agencyId) {
-    return NextResponse.json({ error: "AGENCY_ID not configured" }, { status: 500 });
-  }
+  const auth = await requireAuth();
+  if (auth.response) return auth.response;
+
   const clients = await db.client.findMany({
-    where: { agencyId },
+    where: { agencyId: auth.user.agencyId },
     orderBy: { name: "asc" },
   });
   return NextResponse.json(clients);
 }
 
 export async function POST(request: Request) {
-  const agencyId = process.env.AGENCY_ID;
-  if (!agencyId) {
-    return NextResponse.json({ error: "AGENCY_ID not configured" }, { status: 500 });
+  const auth = await requireAuth();
+  if (auth.response) return auth.response;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Corpo da requisição inválido." }, { status: 400 });
   }
 
-  const body = await request.json();
   const parsed = createClientSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -39,16 +43,29 @@ export async function POST(request: Request) {
 
   const slug = parsed.data.slug ?? slugify(parsed.data.name);
 
-  const client = await db.client.create({
-    data: {
-      agencyId,
-      name: parsed.data.name,
-      slug,
-      email: parsed.data.email || null,
-      phone: parsed.data.phone || null,
-      active: parsed.data.active ?? true,
-    },
-  });
+  try {
+    const client = await db.client.create({
+      data: {
+        agencyId: auth.user.agencyId,
+        name: parsed.data.name,
+        slug,
+        email: parsed.data.email || null,
+        phone: parsed.data.phone || null,
+        active: parsed.data.active ?? true,
+      },
+    });
 
-  return NextResponse.json(client);
+    return NextResponse.json(client, { status: 201 });
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      err.message.includes("Unique constraint")
+    ) {
+      return NextResponse.json(
+        { error: "Já existe um cliente com esse slug nesta agência." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 }

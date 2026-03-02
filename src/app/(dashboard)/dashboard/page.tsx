@@ -166,7 +166,7 @@ export default async function DashboardPage() {
                     <div>
                       <p className="app-table-row-title">{report.client.name}</p>
                       <p className="app-table-row-subtitle">
-                        {report.period.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                        {report.createdAt.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
