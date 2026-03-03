@@ -69,7 +69,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           <CardHeader className="border-b bg-muted/30">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-500" />
-              <CardTitle>Análise Executiva</CardTitle>
+              <CardTitle>Análise Executiva (Cliente)</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="p-6">
@@ -87,6 +87,24 @@ export default async function ReportDetailPage({ params }: PageProps) {
             </div>
           </CardContent>
         </Card>
+
+        {report.aiAnalysisInternal && (
+          <Card className="app-enter app-enter-delay-3 rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
+            <CardHeader className="border-b bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-blue-500" />
+                <CardTitle>Relatório Interno (Equipe)</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="prose prose-sm md:prose-base max-w-none text-muted-foreground">
+                <p className="whitespace-pre-wrap leading-relaxed">
+                  {report.aiAnalysisInternal}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

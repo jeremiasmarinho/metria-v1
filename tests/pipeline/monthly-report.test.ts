@@ -74,7 +74,10 @@ describe("monthly-report pipeline integration", () => {
       googleSearchConsole: null,
       metaAds: null,
     } as never);
-    vi.mocked(analyzeMetrics).mockResolvedValue("Resumo executivo" as never);
+    vi.mocked(analyzeMetrics).mockResolvedValue({
+      client: "Resumo executivo cliente",
+      internal: "Relatório interno equipe",
+    } as never);
     vi.mocked(compileReportPdf).mockResolvedValue(Buffer.from("pdf") as never);
     vi.mocked(storeReportPdf).mockResolvedValue("https://signed/report.pdf" as never);
     vi.mocked(deliverReport).mockResolvedValue({

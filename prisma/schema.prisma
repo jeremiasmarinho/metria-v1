@@ -132,9 +132,10 @@ model Report {
   agencyId     String
   period       DateTime // Mês de referência
   status       ReportStatus @default(PENDING)
-  pdfUrl       String? // URL no R2 (com expiração)
-  aiAnalysis   String? // Texto gerado pela OpenAI
-  errorMessage String? // Último erro (se houver)
+  pdfUrl             String? // URL no R2 (com expiração)
+  aiAnalysis         String? // Relatório cliente (executivo, para PDF)
+  aiAnalysisInternal String? // Relatório interno (diagnóstico + 2 ações, para equipe)
+  errorMessage       String? // Último erro (se houver)
   sentAt       DateTime? // Quando foi enviado ao cliente
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt

@@ -71,7 +71,8 @@ async function runPipelineForClient(clientId: string, agencyId: string, period: 
     const processed = await processClientMetrics(clientId, period);
 
     await updateStatus("ANALYZING");
-    const aiAnalysis = await analyzeMetrics(processed);
+    const { client: aiAnalysis, internal: aiAnalysisInternal } =
+      await analyzeMetrics(processed, client.name);
 
     await updateStatus("COMPILING");
     const periodStr = period.toISOString().slice(0, 7);
@@ -84,7 +85,7 @@ async function runPipelineForClient(clientId: string, agencyId: string, period: 
 
     await db.report.update({
       where: { id: report.id },
-      data: { aiAnalysis },
+      data: { aiAnalysis, aiAnalysisInternal },
     });
 
     await updateStatus("STORING");

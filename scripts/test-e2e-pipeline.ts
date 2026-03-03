@@ -273,7 +273,7 @@ async function main() {
   });
 
   console.log("\n[E2E] Analisando métricas (OpenAI)...");
-  const aiAnalysis = await analyzeMetrics(processed);
+  const { client: aiAnalysis } = await analyzeMetrics(processed, client.name);
   console.log("[E2E] Análise concluída. Tamanho:", aiAnalysis.length, "caracteres");
 
   console.log("\n[E2E] Gerando PDF...");
