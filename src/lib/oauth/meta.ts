@@ -1,8 +1,8 @@
-const META_GRAPH_VERSION = "v21.0";
+const META_GRAPH_VERSION = "v25.0";
 
 export function getMetaAuthorizeUrl(redirectUri: string, state: string): string {
-  const clientId = process.env.META_APP_ID;
-  if (!clientId) throw new Error("META_APP_ID is not configured");
+  const clientId = process.env.META_APP_ID ?? process.env.FACEBOOK_CLIENT_ID;
+  if (!clientId) throw new Error("META_APP_ID ou FACEBOOK_CLIENT_ID deve estar configurado");
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -18,9 +18,11 @@ export async function exchangeMetaCodeForTokens(
   code: string,
   redirectUri: string
 ): Promise<{ accessToken: string; expiresIn?: number }> {
-  const clientId = process.env.META_APP_ID;
-  const clientSecret = process.env.META_APP_SECRET;
-  if (!clientId || !clientSecret) throw new Error("META_APP_ID or META_APP_SECRET not configured");
+  const clientId = process.env.META_APP_ID ?? process.env.FACEBOOK_CLIENT_ID;
+  const clientSecret = process.env.META_APP_SECRET ?? process.env.FACEBOOK_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("META_APP_ID/META_APP_SECRET ou FACEBOOK_CLIENT_ID/FACEBOOK_CLIENT_SECRET devem estar configurados");
+  }
 
   const params = new URLSearchParams({
     client_id: clientId,

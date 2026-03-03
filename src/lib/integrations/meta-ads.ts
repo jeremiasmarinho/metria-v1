@@ -14,14 +14,14 @@ export async function fetchMetaAdsMetrics(options: FetchOptions): Promise<MetaAd
   const params = new URLSearchParams({
     fields: "spend,reach,impressions,clicks,actions",
     time_range: JSON.stringify({
-      since: startDate.replace(/-/g, ""),
-      until: endDate.replace(/-/g, ""),
+      since: startDate,
+      until: endDate,
     }),
     access_token: accessToken,
   });
 
   const response = await fetch(
-    `https://graph.facebook.com/v18.0/${accountId}/insights?${params}`
+    `https://graph.facebook.com/v25.0/${accountId}/insights?${params}`
   );
 
   if (!response.ok) {

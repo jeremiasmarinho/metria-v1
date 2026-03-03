@@ -24,14 +24,24 @@ export async function GET() {
     },
   });
 
-  if (!conn) {
-    return NextResponse.json(
-      { error: "Meta não conectada. Conecte a conta Meta na página de Configurações." },
-      { status: 404 }
-    );
+  let accessToken: string | undefined;
+
+  if (conn && conn.status !== "DISCONNECTED") {
+    accessToken = decrypt(conn.accessToken);
+  } else if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.META_ADS_ACCESS_TOKEN
+  ) {
+    accessToken = process.env.META_ADS_ACCESS_TOKEN;
   }
 
-  if (conn.status === "DISCONNECTED") {
+  if (!accessToken) {
+    if (!conn) {
+      return NextResponse.json(
+        { error: "Meta não conectada. Conecte a conta Meta na página de Configurações." },
+        { status: 404 }
+      );
+    }
     return NextResponse.json(
       { error: "A conexão Meta expirou ou foi revogada. Reconecte na página de Configurações." },
       { status: 403 }
@@ -39,7 +49,6 @@ export async function GET() {
   }
 
   try {
-    const accessToken = decrypt(conn.accessToken);
     const accounts = await listMetaAdAccounts(accessToken);
     return NextResponse.json({ accounts });
   } catch (err) {

@@ -11,6 +11,8 @@
     "db:push": "dotenv -e .env.local -- prisma db push",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:seed": "dotenv -e .env.local -- tsx prisma/seed.ts",
+    "verify-credentials": "dotenv -e .env.local -- tsx scripts/verify-credentials.ts",
+    "test-e2e-pipeline": "dotenv -e .env.local -- tsx scripts/test-e2e-pipeline.ts",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "test": "vitest run",
     "test:watch": "vitest"

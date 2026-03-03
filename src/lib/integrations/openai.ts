@@ -1,15 +1,13 @@
 import OpenAI from "openai";
 
-const OPENAI_SYSTEM_PROMPT = `Você é um analista sênior de marketing digital.
-Receba os dados de performance do mês e gere um Relatório Executivo em português brasileiro.
+const OPENAI_SYSTEM_PROMPT = `Você é um analista direto de marketing digital.
+Analise os dados de performance e gere um resumo executivo em português brasileiro.
 
 Regras:
-- Máximo 4 parágrafos.
-- Comece com o destaque positivo mais relevante.
-- Aponte 1-2 pontos de atenção com sugestão de ação.
-- Use números exatos (não arredonde demais).
-- Tom profissional mas acessível (o leitor é dono de empresa, não técnico).
-- NÃO invente dados. Use apenas o que foi fornecido.`;
+- Seja direto e objetivo. Máximo 2-3 linhas.
+- Se todos os dados forem zero: diga "Sem investimento no período" ou "Sem dados no período".
+- Se houver dados: cite ROAS (se aplicável) e Custo por Conversão em 2 linhas.
+- Use apenas os dados fornecidos. Não invente nada.`;
 
 export async function generateExecutiveSummary(
   metricsJson: string,
@@ -34,7 +32,7 @@ export async function generateExecutiveSummary(
           { role: "system", content: OPENAI_SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Analise os seguintes dados de marketing e gere o relatório executivo:\n\n${metricsJson}`,
+            content: `Analise estes dados de marketing. Seja direto. Se dados zero: "Sem investimento no período". Se houver dados: cite ROAS e Custo por Conversão em 2 linhas.\n\n${metricsJson}`,
           },
         ],
         max_tokens: 800,

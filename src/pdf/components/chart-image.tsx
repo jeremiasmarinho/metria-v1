@@ -1,3 +1,4 @@
+import React from "react";
 import { View, Image } from "@react-pdf/renderer";
 
 interface ChartImageProps {
@@ -6,10 +7,16 @@ interface ChartImageProps {
   height?: number;
 }
 
-export function ChartImage({ src, width = 400, height = 200 }: ChartImageProps) {
+export function ChartImage({ src, width = 500, height = 250 }: ChartImageProps) {
   return (
     <View style={{ marginBottom: 16 }}>
-      <Image src={src} style={{ width, height }} />
+      <Image
+        src={src}
+        style={{
+          width: Number(width),
+          height: Number(height),
+        }}
+      />
     </View>
   );
 }
