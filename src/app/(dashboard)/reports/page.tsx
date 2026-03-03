@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { ReportCard } from "@/components/reports/report-card";
 import { FileText } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import type { Report, Client } from "@prisma/client";
 
 type ReportWithClient = Report & { client: Client };
@@ -39,13 +41,14 @@ export default async function ReportsPage() {
             <FileText className="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 className="text-lg font-medium text-foreground mb-1">Nenhum relatório gerado</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground max-w-sm">
             Gere um relatório a partir da página do cliente e acompanhe cada etapa do pipeline em tempo real.
           </p>
-          <div className="mt-5 w-full max-w-xs space-y-2">
-            <div className="app-skeleton h-3 w-full" />
-            <div className="app-skeleton h-3 w-4/6" />
-          </div>
+          <Link href="/clients" className="mt-6">
+            <Button variant="outline" className="rounded-xl">
+              Ir para Clientes
+            </Button>
+          </Link>
         </div>
       ) : (
         <div className="app-enter app-enter-delay-1 grid gap-4 md:grid-cols-2 lg:grid-cols-3">

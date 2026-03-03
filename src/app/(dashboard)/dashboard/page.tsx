@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
-import { Users, FileText, CheckCircle2, CalendarClock, ArrowUpRight, Sparkles } from "lucide-react";
+import { Users, FileText, CheckCircle2, CalendarClock, ArrowUpRight, Sparkles, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReportStatus } from "@/components/reports/report-status";
 import type { Report } from "@prisma/client";
@@ -150,11 +150,13 @@ export default async function DashboardPage() {
                 <p className="text-sm text-muted-foreground">
                   Ainda não há relatórios — gere o primeiro para começar a acompanhar performance e entregas.
                 </p>
-                <div className="mt-5 w-full max-w-xs space-y-2">
-                  <div className="app-skeleton h-3 w-full" />
-                  <div className="app-skeleton h-3 w-5/6" />
-                  <div className="app-skeleton h-3 w-4/6" />
-                </div>
+                <Link
+                  href="/clients"
+                  className="mt-5 flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Acessar clientes para gerar
+                </Link>
               </div>
             ) : (
               <div className="app-table-shell">

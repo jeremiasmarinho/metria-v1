@@ -1,4 +1,8 @@
-const GOOGLE_ADS_SCOPE = "https://www.googleapis.com/auth/adwords";
+const GOOGLE_SCOPES = [
+  "https://www.googleapis.com/auth/adwords",
+  "https://www.googleapis.com/auth/analytics.readonly",
+  "https://www.googleapis.com/auth/webmasters.readonly",
+].join(" ");
 
 /**
  * Gera URL de autorização OAuth. access_type=offline e prompt=consent são
@@ -12,7 +16,7 @@ export function getGoogleAuthorizeUrl(redirectUri: string, state: string): strin
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
-    scope: GOOGLE_ADS_SCOPE,
+    scope: GOOGLE_SCOPES,
     response_type: "code",
     state,
     access_type: "offline", // Obrigatório para obter refresh_token

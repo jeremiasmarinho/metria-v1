@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 interface ClientFormProps {
   defaultValues?: {
@@ -13,6 +14,7 @@ interface ClientFormProps {
     phone?: string;
     active: boolean;
   };
+  isSubmitting?: boolean;
   onSubmit: (data: {
     name: string;
     slug: string;
@@ -22,7 +24,7 @@ interface ClientFormProps {
   }) => void;
 }
 
-export function ClientForm({ defaultValues, onSubmit }: ClientFormProps) {
+export function ClientForm({ defaultValues, isSubmitting = false, onSubmit }: ClientFormProps) {
   const [name, setName] = useState(defaultValues?.name ?? "");
   const [slug, setSlug] = useState(defaultValues?.slug ?? "");
   const [email, setEmail] = useState(defaultValues?.email ?? "");
@@ -95,9 +97,17 @@ export function ClientForm({ defaultValues, onSubmit }: ClientFormProps) {
       </div>
       <Button
         type="submit"
+        disabled={isSubmitting}
         className="w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
       >
-        Salvar cliente
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Salvando...
+          </>
+        ) : (
+          "Salvar cliente"
+        )}
       </Button>
     </form>
   );

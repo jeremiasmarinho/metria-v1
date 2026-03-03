@@ -12,12 +12,19 @@ export async function GET() {
     return NextResponse.redirect(new URL("/login", process.env.NEXTAUTH_URL || "http://localhost:3000"));
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const redirectUri = `${baseUrl}/api/oauth/google/callback`;
-  const state = Buffer.from(
-    JSON.stringify({ agencyId: user.agencyId, userId: user.id })
-  ).toString("base64url");
+  try {
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const redirectUri = `${baseUrl}/api/oauth/google/callback`;
+    const state = Buffer.from(
+      JSON.stringify({ agencyId: user.agencyId, userId: user.id })
+    ).toString("base64url");
 
-  const url = getGoogleAuthorizeUrl(redirectUri, state);
-  return NextResponse.redirect(url);
+    const url = getGoogleAuthorizeUrl(redirectUri, state);
+    return NextResponse.redirect(url);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Configuração necessária";
+    return NextResponse.redirect(
+      `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/settings?oauth_error=google:${encodeURIComponent(msg)}`
+    );
+  }
 }

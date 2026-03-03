@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Link2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Link2, Search, AlertCircle } from "lucide-react";
 import { notify } from "@/lib/ui-feedback";
+
+type AccountWithLinked = {
+  id: string;
+  name?: string;
+  customerId?: string;
+  descriptiveName?: string;
+  linkedToClient?: { id: string; name: string };
+};
 
 interface ClientIntegrationsProps {
   clientId: string;
@@ -21,6 +29,11 @@ interface ClientIntegrationsProps {
   googleAdsCustomerId?: string | null;
   hasGoogle: boolean;
   hasMeta: boolean;
+  /** Quando true, o token Meta vem da agência — esconder campo de token. */
+  metaUsesAgency?: boolean;
+  /** Quando true, o token Google vem da agência — esconder campos de token. */
+  googleUsesAgency?: boolean;
+  openLinkModalOnMount?: "meta" | "google";
 }
 
 export function ClientIntegrations({
@@ -30,6 +43,9 @@ export function ClientIntegrations({
   googleAdsCustomerId: initialGoogleAdsCustomerId,
   hasGoogle,
   hasMeta,
+  metaUsesAgency = false,
+  googleUsesAgency = false,
+  openLinkModalOnMount,
 }: ClientIntegrationsProps) {
   const router = useRouter();
   const [googlePropertyId, setGooglePropertyId] = useState(
@@ -51,8 +67,9 @@ export function ClientIntegrations({
 
   const [linkModal, setLinkModal] = useState<"meta" | "google" | null>(null);
   const [linkLoading, setLinkLoading] = useState(false);
-  const [metaAccounts, setMetaAccounts] = useState<{ id: string; name: string }[]>([]);
-  const [googleAccounts, setGoogleAccounts] = useState<{ id: string; customerId: string; descriptiveName?: string }[]>([]);
+  const [metaAccounts, setMetaAccounts] = useState<AccountWithLinked[]>([]);
+  const [googleAccounts, setGoogleAccounts] = useState<AccountWithLinked[]>([]);
+  const [linkSearch, setLinkSearch] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -136,20 +153,46 @@ export function ClientIntegrations({
   }
 
   async function openLinkModal(provider: "meta" | "google") {
-    setLinkModal(provider);
     setLinkLoading(true);
+    try {
+      const connRes = await fetch("/api/agency/connections");
+      if (!connRes.ok) throw new Error("Erro ao verificar conexões");
+      const connections = (await connRes.json()) as { provider: string; status: string }[];
+      const conn = connections.find((c) => c.provider === (provider === "meta" ? "META" : "GOOGLE"));
+      if (!conn || conn.status === "DISCONNECTED") {
+        router.push("/settings?message=" + encodeURIComponent("Conecte sua conta de Agência primeiro."));
+        notify({
+          variant: "error",
+          title: "Agência não conectada",
+          description: "Conecte sua conta " + (provider === "meta" ? "Meta" : "Google Ads") + " nas Configurações.",
+        });
+        setLinkLoading(false);
+        return;
+      }
+    } catch {
+      setLinkLoading(false);
+      return;
+    }
+
+    setLinkModal(provider);
+    setLinkSearch("");
     setMetaAccounts([]);
     setGoogleAccounts([]);
+    setLinkLoading(true);
     try {
+      const base = `/api/agency/connections/${provider === "meta" ? "meta" : "google"}/accounts`;
+      const res = await fetch(`${base}?clientId=${encodeURIComponent(clientId)}`);
+      const data = (await res.json()) as { accounts?: AccountWithLinked[]; error?: string; code?: string };
+      if (!res.ok) {
+        const msg = data.error || "Erro ao listar";
+        if (data.code === "TOKEN_EXPIRED" || data.code === "AGENCY_NOT_CONNECTED") {
+          router.push("/settings?message=" + encodeURIComponent(msg));
+        }
+        throw new Error(msg);
+      }
       if (provider === "meta") {
-        const res = await fetch("/api/agency/connections/meta/accounts");
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Erro ao listar");
         setMetaAccounts(data.accounts ?? []);
       } else {
-        const res = await fetch("/api/agency/connections/google/accounts");
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Erro ao listar");
         setGoogleAccounts(data.accounts ?? []);
       }
     } catch (err) {
@@ -163,6 +206,33 @@ export function ClientIntegrations({
       setLinkLoading(false);
     }
   }
+
+  const filteredMetaAccounts = useMemo(() => {
+    if (!linkSearch.trim()) return metaAccounts;
+    const q = linkSearch.toLowerCase().trim();
+    return metaAccounts.filter(
+      (a) =>
+        a.name?.toLowerCase().includes(q) ||
+        a.id?.toLowerCase().includes(q)
+    );
+  }, [metaAccounts, linkSearch]);
+
+  const filteredGoogleAccounts = useMemo(() => {
+    if (!linkSearch.trim()) return googleAccounts;
+    const q = linkSearch.toLowerCase().trim();
+    return googleAccounts.filter(
+      (a) =>
+        (a.descriptiveName ?? a.customerId ?? "").toLowerCase().includes(q) ||
+        (a.customerId ?? a.id ?? "").toLowerCase().includes(q)
+    );
+  }, [googleAccounts, linkSearch]);
+
+  useEffect(() => {
+    if (openLinkModalOnMount) {
+      openLinkModal(openLinkModalOnMount);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openLinkModalOnMount]);
 
   async function saveMeta() {
     setSaving(true);
@@ -237,7 +307,7 @@ export function ClientIntegrations({
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="googleAdsCustomerId">Conta Google Ads (xxx-xxx-xxxx)</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   id="googleAdsCustomerId"
                   type="text"
@@ -248,11 +318,11 @@ export function ClientIntegrations({
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  variant={!googleAdsCustomerId ? "default" : "outline"}
                   size="sm"
                   onClick={() => openLinkModal("google")}
                   disabled={linkLoading}
-                  className="shrink-0"
+                  className={`shrink-0 ${!googleAdsCustomerId ? "ring-2 ring-primary/30" : ""}`}
                   title="Vincular conta da agência"
                 >
                   {linkLoading && linkModal === "google" ? (
@@ -262,6 +332,12 @@ export function ClientIntegrations({
                   )}
                 </Button>
               </div>
+              {!googleAdsCustomerId && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Vincule uma conta da agência para usar os dados automaticamente.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="googlePropertyId">ID da propriedade (GA4)</Label>
@@ -283,46 +359,56 @@ export function ClientIntegrations({
                 placeholder="https://example.com"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="googleAccessToken">Token de acesso</Label>
-              <div className="relative">
-                <Input
-                  id="googleAccessToken"
-                  type={showGoogleTokens ? "text" : "password"}
-                  value={googleAccessToken}
-                  onChange={(e) => setGoogleAccessToken(e.target.value)}
-                  placeholder={hasGoogle ? "••••••••••••••••••••••••" : "Cole o token de acesso"}
-                  className="pr-10"
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowGoogleTokens(!showGoogleTokens)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
-                >
-                  {showGoogleTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="googleRefreshToken">Token de atualização</Label>
-              <div className="relative">
-                <Input
-                  id="googleRefreshToken"
-                  type={showGoogleTokens ? "text" : "password"}
-                  value={googleRefreshToken}
-                  onChange={(e) => setGoogleRefreshToken(e.target.value)}
-                  placeholder={hasGoogle ? "••••••••••••••••••••••••" : "Cole o token de atualização"}
-                  className="pr-10"
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowGoogleTokens(!showGoogleTokens)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
-                >
-                  {showGoogleTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
+            {!googleUsesAgency && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="googleAccessToken">Token de acesso</Label>
+                  <div className="relative">
+                    <Input
+                      id="googleAccessToken"
+                      type={showGoogleTokens ? "text" : "password"}
+                      value={googleAccessToken}
+                      onChange={(e) => setGoogleAccessToken(e.target.value)}
+                      placeholder={hasGoogle ? "••••••••••••••••••••••••" : "Cole o token de acesso"}
+                      className="pr-10"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowGoogleTokens(!showGoogleTokens)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
+                    >
+                      {showGoogleTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="googleRefreshToken">Token de atualização</Label>
+                  <div className="relative">
+                    <Input
+                      id="googleRefreshToken"
+                      type={showGoogleTokens ? "text" : "password"}
+                      value={googleRefreshToken}
+                      onChange={(e) => setGoogleRefreshToken(e.target.value)}
+                      placeholder={hasGoogle ? "••••••••••••••••••••••••" : "Cole o token de atualização"}
+                      className="pr-10"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowGoogleTokens(!showGoogleTokens)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
+                    >
+                      {showGoogleTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+            {googleUsesAgency && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 rounded-lg bg-muted/50 px-3 py-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                Token gerenciado pela conexão da agência.
+              </p>
+            )}
             <Button onClick={saveGoogle} disabled={saving} className="mt-2 w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md">
               {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : "Salvar Google"}
             </Button>
@@ -354,7 +440,7 @@ export function ClientIntegrations({
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="metaAdAccountId">ID da conta de anúncios</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   id="metaAdAccountId"
                   type="text"
@@ -365,11 +451,11 @@ export function ClientIntegrations({
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  variant={!metaAdAccountId ? "default" : "outline"}
                   size="sm"
                   onClick={() => openLinkModal("meta")}
                   disabled={linkLoading}
-                  className="shrink-0"
+                  className={`shrink-0 ${!metaAdAccountId ? "ring-2 ring-primary/30" : ""}`}
                   title="Vincular conta da agência"
                 >
                   {linkLoading && linkModal === "meta" ? (
@@ -379,27 +465,41 @@ export function ClientIntegrations({
                   )}
                 </Button>
               </div>
+              {!metaAdAccountId && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Vincule uma conta da agência para usar os dados automaticamente.
+                </p>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="metaAccessToken">Token de acesso</Label>
-              <div className="relative">
-                <Input
-                  id="metaAccessToken"
-                  type={showMetaTokens ? "text" : "password"}
-                  value={metaAccessToken}
-                  onChange={(e) => setMetaAccessToken(e.target.value)}
-                  placeholder={hasMeta ? "••••••••••••••••••••••••" : "Cole o token de acesso"}
-                  className="pr-10"
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowMetaTokens(!showMetaTokens)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
-                >
-                  {showMetaTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+            {!metaUsesAgency && (
+              <div className="space-y-2">
+                <Label htmlFor="metaAccessToken">Token de acesso</Label>
+                <div className="relative">
+                  <Input
+                    id="metaAccessToken"
+                    type={showMetaTokens ? "text" : "password"}
+                    value={metaAccessToken}
+                    onChange={(e) => setMetaAccessToken(e.target.value)}
+                    placeholder={hasMeta ? "••••••••••••••••••••••••" : "Cole o token de acesso"}
+                    className="pr-10"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowMetaTokens(!showMetaTokens)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-all duration-300 ease-in-out hover:text-foreground"
+                  >
+                    {showMetaTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
+            {metaUsesAgency && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 rounded-lg bg-muted/50 px-3 py-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                Token gerenciado pela conexão da agência.
+              </p>
+            )}
             <Button onClick={saveMeta} disabled={saving} className="mt-2 w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md">
               {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : "Salvar Meta"}
             </Button>
@@ -420,13 +520,23 @@ export function ClientIntegrations({
             aria-label="Fechar"
           />
           <div className="relative max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl">
-            <div className="border-b border-border/70 p-4">
+            <div className="border-b border-border/70 p-4 space-y-3">
               <h3 className="font-semibold">
                 {linkModal === "meta" ? "Vincular conta Meta" : "Vincular conta Google Ads"}
               </h3>
               <p className="text-sm text-muted-foreground">
                 Selecione a conta para associar a este cliente.
               </p>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Buscar por nome ou ID..."
+                  value={linkSearch}
+                  onChange={(e) => setLinkSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
             <div className="max-h-[50vh] overflow-y-auto p-4">
               {linkLoading ? (
@@ -438,24 +548,35 @@ export function ClientIntegrations({
                   <p className="py-4 text-center text-sm text-muted-foreground">
                     Nenhuma conta encontrada. Conecte a Meta na página de Configurações.
                   </p>
+                ) : filteredMetaAccounts.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    Nenhum resultado para &quot;{linkSearch}&quot;
+                  </p>
                 ) : (
                   <ul className="space-y-2">
-                    {metaAccounts.map((a) => (
+                    {filteredMetaAccounts.map((a) => (
                       <li
                         key={a.id}
                         className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 px-3 py-2"
                       >
-                        <div>
-                          <p className="font-medium">{a.name}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{a.name}</p>
                           <p className="text-xs text-muted-foreground">{a.id}</p>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => linkMetaAccount(a.id)}
-                          disabled={linkLoading}
-                        >
-                          Vincular
-                        </Button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {a.linkedToClient && (
+                            <Badge variant="secondary" className="text-xs">
+                              Já vinculado
+                            </Badge>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={() => linkMetaAccount(a.id)}
+                            disabled={linkLoading}
+                          >
+                            Vincular
+                          </Button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -464,24 +585,35 @@ export function ClientIntegrations({
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   Nenhuma conta encontrada. Conecte o Google Ads na página de Configurações.
                 </p>
+              ) : filteredGoogleAccounts.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  Nenhum resultado para &quot;{linkSearch}&quot;
+                </p>
               ) : (
                 <ul className="space-y-2">
-                  {googleAccounts.map((a) => (
+                  {filteredGoogleAccounts.map((a) => (
                     <li
                       key={a.id}
                       className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 px-3 py-2"
                     >
-                      <div>
-                        <p className="font-medium">{a.descriptiveName ?? a.customerId}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{a.descriptiveName ?? a.customerId}</p>
                         <p className="text-xs text-muted-foreground">{a.customerId}</p>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => linkGoogleAccount(a.customerId)}
-                        disabled={linkLoading}
-                      >
-                        Vincular
-                      </Button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {a.linkedToClient && (
+                          <Badge variant="secondary" className="text-xs">
+                            Já vinculado
+                          </Badge>
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={() => linkGoogleAccount(a.customerId ?? a.id)}
+                          disabled={linkLoading}
+                        >
+                          Vincular
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>

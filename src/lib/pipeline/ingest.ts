@@ -82,6 +82,13 @@ export async function ingestClientMetrics(
   }> = [];
   const results: IngestSourceResult[] = [];
 
+  const reportConfigGoogle = client.reportConfig as {
+    googlePropertyId?: string;
+    googleSiteUrl?: string;
+  };
+  const hasGoogleConfig =
+    reportConfigGoogle?.googlePropertyId || reportConfigGoogle?.googleSiteUrl;
+
   if (integrations.google?.accessToken && integrations.google?.refreshToken) {
     try {
       const decrypted = {
@@ -90,35 +97,89 @@ export async function ingestClientMetrics(
         expiresAt: integrations.google.expiresAt,
       };
       const fresh = await ensureFreshGoogleTokens(clientId, decrypted);
-      const reportConfig = client.reportConfig as {
-        googlePropertyId?: string;
-        googleSiteUrl?: string;
-      };
 
-      if (reportConfig?.googlePropertyId) {
+      if (reportConfigGoogle?.googlePropertyId) {
         sourcesToFetch.push({
           source: "GOOGLE_ANALYTICS",
           fn: () =>
             fetchGoogleAnalyticsMetrics({
               clientId,
               accessToken: fresh.accessToken,
-              propertyId: reportConfig.googlePropertyId!,
+              propertyId: reportConfigGoogle.googlePropertyId!,
               startDate,
               endDate,
             }),
         });
       }
-      if (reportConfig?.googleSiteUrl) {
+      if (reportConfigGoogle?.googleSiteUrl) {
         sourcesToFetch.push({
           source: "GOOGLE_SEARCH_CONSOLE",
           fn: () =>
             fetchSearchConsoleMetrics({
               accessToken: fresh.accessToken,
-              siteUrl: reportConfig.googleSiteUrl!,
+              siteUrl: reportConfigGoogle.googleSiteUrl!,
               startDate,
               endDate,
             }),
         });
+      }
+    } catch (err) {
+      const reason = mapSourceReason(err) ?? "GOOGLE_TOKEN_REFRESH_FAILED";
+      results.push({ source: "GOOGLE_ANALYTICS", status: "error", reason });
+      results.push({ source: "GOOGLE_SEARCH_CONSOLE", status: "error", reason });
+    }
+  } else if (
+    hasGoogleConfig &&
+    client.googleAdsCustomerId &&
+    !integrations.google?.accessToken
+  ) {
+    try {
+      const agencyConn = await db.agencyConnection.findFirst({
+        where: {
+          agencyId,
+          provider: OAuthProvider.GOOGLE,
+          status: "CONNECTED",
+        },
+      });
+      if (agencyConn?.accessToken && agencyConn?.refreshToken) {
+        const decrypted = {
+          accessToken: decrypt(agencyConn.accessToken),
+          refreshToken: decrypt(agencyConn.refreshToken),
+          expiresAt: agencyConn.expiresAt?.getTime() ?? 0,
+        };
+        const fresh = await ensureFreshGoogleTokens(clientId, decrypted, {
+          persistToClient: false,
+        });
+
+        if (reportConfigGoogle?.googlePropertyId) {
+          sourcesToFetch.push({
+            source: "GOOGLE_ANALYTICS",
+            fn: () =>
+              fetchGoogleAnalyticsMetrics({
+                clientId,
+                accessToken: fresh.accessToken,
+                propertyId: reportConfigGoogle.googlePropertyId!,
+                startDate,
+                endDate,
+              }),
+            onAuthError: () =>
+              markAgencyConnectionDisconnected(agencyId, OAuthProvider.GOOGLE),
+          });
+        }
+        if (reportConfigGoogle?.googleSiteUrl) {
+          sourcesToFetch.push({
+            source: "GOOGLE_SEARCH_CONSOLE",
+            fn: () =>
+              fetchSearchConsoleMetrics({
+                accessToken: fresh.accessToken,
+                siteUrl: reportConfigGoogle.googleSiteUrl!,
+                startDate,
+                endDate,
+              }),
+            onAuthError: () =>
+              markAgencyConnectionDisconnected(agencyId, OAuthProvider.GOOGLE),
+          });
+        }
       }
     } catch (err) {
       const reason = mapSourceReason(err) ?? "GOOGLE_TOKEN_REFRESH_FAILED";
@@ -208,7 +269,9 @@ export async function ingestClientMetrics(
       if (onAuthError) {
         const isAuthError =
           (source === "META_ADS" && META_AUTH_ERRORS.includes(errMsg)) ||
-          (source === "GOOGLE_ANALYTICS" && GOOGLE_AUTH_ERRORS.includes(errMsg));
+          ((source === "GOOGLE_ANALYTICS" || source === "GOOGLE_SEARCH_CONSOLE") &&
+            (GOOGLE_AUTH_ERRORS.includes(errMsg) ||
+              errMsg.includes("Google token refresh failed")));
         if (isAuthError) {
           await onAuthError();
         }

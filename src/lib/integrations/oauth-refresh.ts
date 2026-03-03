@@ -53,36 +53,40 @@ export async function refreshGoogleToken(refreshToken: string): Promise<{
 
 export async function ensureFreshGoogleTokens(
   clientId: string,
-  tokens: GoogleTokens
+  tokens: GoogleTokens,
+  options?: { persistToClient?: boolean }
 ): Promise<GoogleTokens> {
+  const persistToClient = options?.persistToClient ?? true;
   if (tokens.expiresAt > Date.now() + TOKEN_EXPIRY_BUFFER_MS) {
     return tokens;
   }
 
   const refreshed = await refreshGoogleToken(tokens.refreshToken);
 
-  const encryptedAccessToken = encrypt(refreshed.accessToken);
-  const encryptedRefreshToken = encrypt(tokens.refreshToken);
+  if (persistToClient) {
+    const encryptedAccessToken = encrypt(refreshed.accessToken);
+    const encryptedRefreshToken = encrypt(tokens.refreshToken);
 
-  const client = await db.client.findUniqueOrThrow({
-    where: { id: clientId },
-  });
+    const client = await db.client.findUniqueOrThrow({
+      where: { id: clientId },
+    });
 
-  const integrations = (client.integrations ?? {}) as Record<
-    string,
-    { accessToken?: string; refreshToken?: string; expiresAt?: number }
-  >;
+    const integrations = (client.integrations ?? {}) as Record<
+      string,
+      { accessToken?: string; refreshToken?: string; expiresAt?: number }
+    >;
 
-  integrations.google = {
-    accessToken: encryptedAccessToken,
-    refreshToken: encryptedRefreshToken,
-    expiresAt: refreshed.expiresAt,
-  };
+    integrations.google = {
+      accessToken: encryptedAccessToken,
+      refreshToken: encryptedRefreshToken,
+      expiresAt: refreshed.expiresAt,
+    };
 
-  await db.client.update({
-    where: { id: clientId },
-    data: { integrations },
-  });
+    await db.client.update({
+      where: { id: clientId },
+      data: { integrations },
+    });
+  }
 
   return {
     accessToken: refreshed.accessToken,

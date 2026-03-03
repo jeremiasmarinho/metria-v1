@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, XCircle, Loader2, ExternalLink, List } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, ExternalLink, List, AlertCircle } from "lucide-react";
 import { notify } from "@/lib/ui-feedback";
+
+interface OAuthStatus {
+  google: boolean;
+  meta: boolean;
+}
 
 interface Connection {
   id: string;
@@ -32,6 +38,7 @@ interface GoogleAccount {
 export function AgencyConnections() {
   const searchParams = useSearchParams();
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [oauthStatus, setOauthStatus] = useState<OAuthStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountsModal, setAccountsModal] = useState<"meta" | "google" | null>(null);
   const [accountsLoading, setAccountsLoading] = useState(false);
@@ -71,10 +78,17 @@ export function AgencyConnections() {
   async function fetchConnections() {
     setLoading(true);
     try {
-      const res = await fetch("/api/agency/connections");
-      if (res.ok) {
-        const data = (await res.json()) as Connection[];
+      const [connRes, oauthRes] = await Promise.all([
+        fetch("/api/agency/connections"),
+        fetch("/api/agency/oauth-status"),
+      ]);
+      if (connRes.ok) {
+        const data = (await connRes.json()) as Connection[];
         setConnections(data);
+      }
+      if (oauthRes.ok) {
+        const data = (await oauthRes.json()) as OAuthStatus;
+        setOauthStatus(data);
       }
     } catch {
       notify({ variant: "error", title: "Erro", description: "Não foi possível carregar conexões." });
@@ -136,9 +150,9 @@ export function AgencyConnections() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">1-Click Auth — Contas da Agência</CardTitle>
+              <CardTitle className="text-lg">Conectar conta pai</CardTitle>
               <CardDescription>
-                Conecte a conta Meta Business ou Google Ads (MCC) e liste sub-contas para vincular aos clientes.
+                Um clique para conectar Meta Business ou Google Ads (MCC). Depois, vincule as sub-contas aos clientes.
               </CardDescription>
             </div>
           </div>
@@ -177,9 +191,22 @@ export function AgencyConnections() {
                     )}
                   </Badge>
                 </div>
-                <div className="flex gap-2">
-                  {hasMeta ? (
-                    <>
+                <div className="flex flex-col gap-2">
+                  {!oauthStatus?.meta ? (
+                    <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium">Configuração necessária</p>
+                        <p className="text-amber-700 dark:text-amber-300 mt-0.5">
+                          O administrador deve configurar META_APP_ID e META_APP_SECRET. Consulte{" "}
+                          <Link href="/docs/setup" className="underline hover:no-underline">
+                            guia de instalação
+                          </Link>.
+                        </p>
+                      </div>
+                    </div>
+                  ) : hasMeta ? (
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -200,7 +227,7 @@ export function AgencyConnections() {
                       >
                         Reconectar <ExternalLink className="ml-1 h-3 w-3" />
                       </a>
-                    </>
+                    </div>
                   ) : (
                     <a
                       href="/api/oauth/meta/authorize"
@@ -242,9 +269,22 @@ export function AgencyConnections() {
                     )}
                   </Badge>
                 </div>
-                <div className="flex gap-2">
-                  {hasGoogle ? (
-                    <>
+                <div className="flex flex-col gap-2">
+                  {!oauthStatus?.google ? (
+                    <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium">Configuração necessária</p>
+                        <p className="text-amber-700 dark:text-amber-300 mt-0.5">
+                          O administrador deve configurar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET. Consulte{" "}
+                          <Link href="/docs/setup" className="underline hover:no-underline">
+                            guia de instalação
+                          </Link>.
+                        </p>
+                      </div>
+                    </div>
+                  ) : hasGoogle ? (
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -265,7 +305,7 @@ export function AgencyConnections() {
                       >
                         Reconectar <ExternalLink className="ml-1 h-3 w-3" />
                       </a>
-                    </>
+                    </div>
                   ) : (
                     <a
                       href="/api/oauth/google/authorize"
