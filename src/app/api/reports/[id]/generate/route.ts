@@ -28,7 +28,7 @@ export async function POST(
   });
 
   if (!report) {
-    return NextResponse.json({ error: "Report not found" }, { status: 404 });
+    return NextResponse.json({ error: "Relatório não encontrado." }, { status: 404 });
   }
 
   if (report.agencyId !== auth.user.agencyId) {
