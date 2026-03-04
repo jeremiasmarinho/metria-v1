@@ -31,7 +31,15 @@ export default function SetupGuidePage() {
             <li>Crie um projeto ou selecione um existente.</li>
             <li>Ative as APIs: Google Ads API, Google Analytics Data API, Search Console API.</li>
             <li>Em &quot;Credenciais&quot; → &quot;Tela de consentimento OAuth&quot;, configure o app (tipo externo).</li>
-            <li>Crie credenciais OAuth 2.0 (tipo &quot;Aplicação da Web&quot;). Adicione o redirect: <code className="rounded bg-muted px-1">&#123;NEXTAUTH_URL&#125;/api/oauth/google/callback</code></li>
+            <li>Crie credenciais OAuth 2.0 (tipo &quot;Aplicação da Web&quot;).</li>
+            <li>
+              Em &quot;URIs de redirecionamento autorizados&quot;, adicione exatamente:
+              <code className="mt-1 block rounded bg-muted p-2 text-xs">&#123;NEXTAUTH_URL&#125;/api/oauth/google/callback</code>
+              (não use &quot;ci&quot; — deve ser &quot;callback&quot;).
+            </li>
+            <li>
+              Em &quot;Origens JavaScript autorizadas&quot;, adicione: <code className="rounded bg-muted px-1">&#123;NEXTAUTH_URL&#125;</code>
+            </li>
             <li>Adicione ao <code className="rounded bg-muted px-1">.env</code>:<br />
               <code className="block mt-2 p-3 rounded-lg bg-muted text-xs">
                 GOOGLE_CLIENT_ID=&quot;...&quot;<br />

@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getBaseUrl } from "@/lib/base-url";
 import { getGoogleAuthorizeUrl } from "@/lib/oauth/google";
 
 export const dynamic = "force-dynamic";
-
-function getBaseUrl(request: NextRequest): string {
-  return new URL(request.url).origin;
-}
 
 export async function GET(request: NextRequest) {
   const baseUrl = getBaseUrl(request);

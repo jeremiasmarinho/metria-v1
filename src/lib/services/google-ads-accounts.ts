@@ -4,7 +4,7 @@
  * @see https://developers.google.com/google-ads/api/docs/first-call/overview#developer_token
  */
 
-const API_VERSION = "v18";
+const API_VERSION = "v20";
 const BASE_URL = `https://googleads.googleapis.com/${API_VERSION}`;
 
 export interface GoogleAdsAccount {

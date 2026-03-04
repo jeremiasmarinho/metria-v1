@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBaseUrl } from "@/lib/base-url";
 import { exchangeGoogleCodeForTokens } from "@/lib/oauth/google";
 import { db } from "@/lib/db";
 import { encrypt } from "@/lib/crypto";
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
   const stateRaw = searchParams.get("state");
   const error = searchParams.get("error");
 
-  const baseUrl = requestUrl.origin;
+  const baseUrl = getBaseUrl(request);
   const settingsUrl = new URL("/settings", baseUrl);
 
   if (error) {
