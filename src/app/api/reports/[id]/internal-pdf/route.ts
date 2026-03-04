@@ -62,7 +62,7 @@ export async function GET(
     const safeClientName = report.client.name.replace(/[^a-zA-Z0-9\s-]/g, "").replace(/\s+/g, "-");
     const filename = `relatorio-interno-${safeClientName}-${monthFormatted}.pdf`;
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
