@@ -131,7 +131,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                   size="sm"
                   onClick={() => {
                     setConfirmExitOpen(false);
-                    signOut({ callbackUrl: "/login" });
+                    const origin = typeof window !== "undefined" ? window.location.origin : "";
+                    signOut({ callbackUrl: origin ? `${origin}/login` : "/login" });
                   }}
                 >
                   Sim, sair

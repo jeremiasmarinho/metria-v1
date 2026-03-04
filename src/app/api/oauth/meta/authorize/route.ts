@@ -1,19 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getMetaAuthorizeUrl } from "@/lib/oauth/meta";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+function getBaseUrl(request: NextRequest): string {
+  return new URL(request.url).origin;
+}
+
+export async function GET(request: NextRequest) {
+  const baseUrl = getBaseUrl(request);
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; agencyId?: string } | undefined;
   if (!user?.id || !user?.agencyId) {
-    return NextResponse.redirect(new URL("/login", process.env.NEXTAUTH_URL || "http://localhost:3000"));
+    return NextResponse.redirect(new URL("/login", baseUrl));
   }
 
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const redirectUri = `${baseUrl}/api/oauth/meta/callback`;
     const state = Buffer.from(
       JSON.stringify({ agencyId: user.agencyId, userId: user.id })
@@ -23,8 +27,6 @@ export async function GET() {
     return NextResponse.redirect(url);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Configuração necessária";
-    return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/settings?oauth_error=meta:${encodeURIComponent(msg)}`
-    );
+    return NextResponse.redirect(new URL(`/settings?oauth_error=meta:${encodeURIComponent(msg)}`, baseUrl));
   }
 }
