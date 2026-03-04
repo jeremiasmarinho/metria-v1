@@ -38,6 +38,13 @@ const updateClientSchema = z.object({
       metaAdAccountId: z.string().optional(),
       logo: z.string().optional(),
       primaryColor: z.string().optional(),
+      trackingPreferences: z
+        .object({
+          ga4IntentEvents: z.array(z.string()).optional(),
+          ga4ConversionEvents: z.array(z.string()).optional(),
+          metaConversionEvents: z.array(z.string()).optional(),
+        })
+        .optional(),
     })
     .optional(),
 });
@@ -66,7 +73,7 @@ export async function PATCH(
   // Verify client belongs to user's agency
   const existing = await db.client.findUnique({
     where: { id },
-    select: { agencyId: true, integrations: true },
+    select: { agencyId: true, integrations: true, reportConfig: true },
   });
 
   if (!existing) {
@@ -88,8 +95,18 @@ export async function PATCH(
     data.metaAdAccountId = parsed.data.metaAdAccountId ?? null;
   if (parsed.data.googleAdsCustomerId !== undefined)
     data.googleAdsCustomerId = parsed.data.googleAdsCustomerId ?? null;
-  if (parsed.data.reportConfig !== undefined)
-    data.reportConfig = parsed.data.reportConfig;
+  if (parsed.data.reportConfig !== undefined) {
+    const existingConfig = (existing?.reportConfig ?? {}) as Record<string, unknown>;
+    const incoming = parsed.data.reportConfig as Record<string, unknown>;
+    const merged: Record<string, unknown> = { ...existingConfig, ...incoming };
+    if (incoming.trackingPreferences != null && typeof incoming.trackingPreferences === "object") {
+      merged.trackingPreferences = {
+        ...((existingConfig.trackingPreferences as Record<string, unknown>) ?? {}),
+        ...(incoming.trackingPreferences as Record<string, unknown>),
+      };
+    }
+    data.reportConfig = merged;
+  }
 
   if (parsed.data.integrations) {
     const existingInt = (existing.integrations ?? {}) as Record<string, unknown>;

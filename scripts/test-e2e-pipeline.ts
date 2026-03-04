@@ -15,7 +15,6 @@ import { analyzeMetrics } from "@/lib/pipeline/analyze";
 import { compileReportPdf } from "@/lib/pipeline/compile-pdf";
 import { storeReportPdf } from "@/lib/pipeline/store";
 import { deliverReport } from "@/lib/pipeline/deliver";
-
 async function ensureMetaAgencyConnection(agencyId: string): Promise<void> {
   const existing = await db.agencyConnection.findFirst({
     where: { agencyId, provider: OAuthProvider.META, status: "CONNECTED" },
@@ -80,41 +79,6 @@ async function ensureClientHasGoogleConfig(
         : normalized;
     updates.googleAdsCustomerId = formatted;
     updates.reportConfig = { ...reportConfig, googleAdsCustomerId: formatted };
-  }
-
-  const simulateData = process.env.E2E_SIMULATE_DATA === "true";
-
-  if (process.env.E2E_INJECT_GOOGLE_METRICS === "true" || simulateData) {
-    const period = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() - 1,
-      1
-    );
-    const gaData = simulateData
-      ? { users: 1250, sessions: 3420, pageviews: 8900, bounceRate: 42, avgSessionDuration: 185, conversions: 34 }
-      : { users: 0, sessions: 0, pageviews: 0, bounceRate: 0, avgSessionDuration: 0, conversions: 0 };
-    await db.metric.upsert({
-      where: {
-        clientId_source_period: {
-          clientId,
-          source: "GOOGLE_ANALYTICS",
-          period,
-        },
-      },
-      create: {
-        clientId,
-        agencyId,
-        source: "GOOGLE_ANALYTICS",
-        period,
-        data: gaData,
-      },
-      update: { data: gaData },
-    });
-    console.log(
-      simulateData
-        ? "[E2E] Métricas simuladas de Google Analytics injetadas (E2E_SIMULATE_DATA=true)"
-        : "[E2E] Métricas mock de Google Analytics injetadas (E2E_INJECT_GOOGLE_METRICS=true)"
-    );
   }
 
   if (Object.keys(updates).length > 0) {
@@ -236,34 +200,6 @@ async function main() {
     throw new Error("Ingest não retornou dados de nenhuma fonte. Verifique Meta/Google.");
   }
 
-  if (process.env.E2E_SIMULATE_DATA === "true") {
-    const metaData = {
-      spend: 1250.5,
-      reach: 45000,
-      impressions: 98000,
-      clicks: 1200,
-      conversions: 28,
-    };
-    await db.metric.upsert({
-      where: {
-        clientId_source_period: {
-          clientId: client.id,
-          source: "META_ADS",
-          period,
-        },
-      },
-      create: {
-        clientId: client.id,
-        agencyId,
-        source: "META_ADS",
-        period,
-        data: metaData,
-      },
-      update: { data: metaData },
-    });
-    console.log("[E2E] Métricas simuladas de Meta Ads injetadas (E2E_SIMULATE_DATA=true)");
-  }
-
   console.log("\n[E2E] Processando métricas...");
   const processed = await processClientMetrics(client.id, period);
   console.log("[E2E] Processamento concluído. Métricas:", {
@@ -273,7 +209,8 @@ async function main() {
   });
 
   console.log("\n[E2E] Analisando métricas (OpenAI)...");
-  const { client: aiAnalysis } = await analyzeMetrics(processed, client.name);
+  const analysisOutput = await analyzeMetrics(processed, client.name);
+  const aiAnalysis = analysisOutput.clientReport.resumoExecutivo;
   console.log("[E2E] Análise concluída. Tamanho:", aiAnalysis.length, "caracteres");
 
   console.log("\n[E2E] Gerando PDF...");

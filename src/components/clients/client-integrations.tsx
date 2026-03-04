@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Link2, Search, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Link2, Search, AlertCircle, Target } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { notify } from "@/lib/ui-feedback";
 
 type AccountWithLinked = {
@@ -24,6 +25,11 @@ interface ClientIntegrationsProps {
     googlePropertyId?: string;
     googleSiteUrl?: string;
     metaAdAccountId?: string;
+    trackingPreferences?: {
+      ga4IntentEvents?: string[];
+      ga4ConversionEvents?: string[];
+      metaConversionEvents?: string[];
+    };
   };
   metaAdAccountId?: string | null;
   googleAdsCustomerId?: string | null;
@@ -76,6 +82,70 @@ export function ClientIntegrations({
 
   const [showGoogleTokens, setShowGoogleTokens] = useState(false);
   const [showMetaTokens, setShowMetaTokens] = useState(false);
+
+  const tp = reportConfig.trackingPreferences ?? {};
+  const [ga4Intent, setGa4Intent] = useState<string[]>(tp.ga4IntentEvents ?? []);
+  const [ga4Conversion, setGa4Conversion] = useState<string[]>(tp.ga4ConversionEvents ?? []);
+  const [metaConversion, setMetaConversion] = useState<string[]>(tp.metaConversionEvents ?? []);
+
+  const GA4_INTENT_OPTIONS = [
+    { value: "clique_whatsapp", label: "Clique no WhatsApp" },
+    { value: "link_click", label: "Clique em link" },
+  ] as const;
+  const GA4_CONVERSION_OPTIONS = [
+    { value: "lead_typebot", label: "Lead Typebot" },
+    { value: "form_submit", label: "Envio de formulário" },
+    { value: "diagnostico_complete", label: "Diagnóstico completo" },
+  ] as const;
+  const META_CONVERSION_OPTIONS = [
+    { value: "lead", label: "Lead" },
+    { value: "message", label: "Mensagem" },
+    { value: "purchase", label: "Compra" },
+  ] as const;
+
+  function toggleInArray(setter: React.Dispatch<React.SetStateAction<string[]>>, value: string) {
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((e) => e !== value) : [...prev, value]
+    );
+  }
+
+  const hasAnyEvent = ga4Intent.length > 0 || ga4Conversion.length > 0 || metaConversion.length > 0;
+  const [savingKpi, setSavingKpi] = useState(false);
+
+  async function saveTrackingPreferences() {
+    setSavingKpi(true);
+    setMessage("");
+    const body = {
+      reportConfig: {
+        ...reportConfig,
+        trackingPreferences: {
+          ga4IntentEvents: ga4Intent,
+          ga4ConversionEvents: ga4Conversion,
+          metaConversionEvents: metaConversion,
+        },
+      },
+    };
+    const res = await fetch(`/api/clients/${clientId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setSavingKpi(false);
+    if (res.ok) {
+      router.refresh();
+      notify({
+        variant: "success",
+        title: "Mapeamento salvo",
+        description: "Eventos de intenção e conversão foram atualizados.",
+      });
+    } else {
+      notify({
+        variant: "error",
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar o mapeamento de KPIs.",
+      });
+    }
+  }
 
   async function saveGoogle() {
     setSaving(true);
@@ -233,6 +303,13 @@ export function ClientIntegrations({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openLinkModalOnMount]);
+
+  useEffect(() => {
+    const next = reportConfig.trackingPreferences ?? {};
+    setGa4Intent(next.ga4IntentEvents ?? []);
+    setGa4Conversion(next.ga4ConversionEvents ?? []);
+    setMetaConversion(next.metaConversionEvents ?? []);
+  }, [reportConfig.trackingPreferences]);
 
   async function saveMeta() {
     setSaving(true);
@@ -506,6 +583,104 @@ export function ClientIntegrations({
           </CardContent>
         </Card>
       </div>
+
+      {/* Mapeamento de KPIs (Eventos Estratégicos) */}
+      <Card className="rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Mapeamento de KPIs (Eventos Estratégicos)</CardTitle>
+          </div>
+          <CardDescription>
+            Selecione os eventos de GA4 e Meta que representam intenção e conversão real. A IA usará estes dados para calcular Custo por Lead e diagnósticos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {!hasAnyEvent && (
+            <p className="text-sm text-amber-600 dark:text-amber-500 flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              Sem eventos selecionados, a IA não conseguirá calcular o Custo por Lead.
+            </p>
+          )}
+
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-3">
+              <Label className="text-base font-medium">GA4 – Intenção</Label>
+              <div className="space-y-2">
+                {GA4_INTENT_OPTIONS.map(({ value, label }) => (
+                  <div key={value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`ga4-intent-${value}`}
+                      checked={ga4Intent.includes(value)}
+                      onCheckedChange={() => toggleInArray(setGa4Intent, value)}
+                    />
+                    <label
+                      htmlFor={`ga4-intent-${value}`}
+                      className="text-sm font-medium leading-none cursor-pointer"
+                    >
+                      {label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-base font-medium">GA4 – Conversão</Label>
+              <div className="space-y-2">
+                {GA4_CONVERSION_OPTIONS.map(({ value, label }) => (
+                  <div key={value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`ga4-conv-${value}`}
+                      checked={ga4Conversion.includes(value)}
+                      onCheckedChange={() => toggleInArray(setGa4Conversion, value)}
+                    />
+                    <label
+                      htmlFor={`ga4-conv-${value}`}
+                      className="text-sm font-medium leading-none cursor-pointer"
+                    >
+                      {label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Meta – Conversão</Label>
+              <div className="space-y-2">
+                {META_CONVERSION_OPTIONS.map(({ value, label }) => (
+                  <div key={value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`meta-conv-${value}`}
+                      checked={metaConversion.includes(value)}
+                      onCheckedChange={() => toggleInArray(setMetaConversion, value)}
+                    />
+                    <label
+                      htmlFor={`meta-conv-${value}`}
+                      className="text-sm font-medium leading-none cursor-pointer"
+                    >
+                      {label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <Button
+            onClick={saveTrackingPreferences}
+            disabled={savingKpi}
+            className="w-full rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md md:w-auto"
+          >
+            {savingKpi ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</>
+            ) : (
+              "Salvar mapeamento de KPIs"
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
       {linkModal && (
         <div

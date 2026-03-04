@@ -18,7 +18,7 @@ type ReportStatus =
   | "FAILED";
 
 const STATUS_MESSAGES: Record<ReportStatus, string> = {
-  PENDING: "Preparando...",
+  PENDING: "Em fila...",
   INGESTING: "Capturando dados...",
   PROCESSING: "Processando métricas...",
   ANALYZING: "Gerando IA...",
@@ -43,11 +43,10 @@ function getFriendlyErrorMessage(raw: string | null): string {
 
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLL_ATTEMPTS = 120;
-const INNGEST_HINT_AFTER_POLLS = 15; // ~22s em PENDING = provável Inngest parado
 
 async function pollReportStatus(
   reportId: string,
-  onStatus: (status: ReportStatus, errorMessage?: string | null, hint?: string) => void
+  onStatus: (status: ReportStatus, errorMessage?: string | null) => void
 ): Promise<{ status: ReportStatus; errorMessage?: string | null }> {
   for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
     const res = await fetch(`/api/reports/${reportId}`);
@@ -58,11 +57,7 @@ async function pollReportStatus(
       errorMessage?: string | null;
     };
 
-    const hint =
-      i >= INNGEST_HINT_AFTER_POLLS && data.status === "PENDING"
-        ? " Verifique se o Inngest Dev Server está rodando (npx inngest-cli dev)."
-        : undefined;
-    onStatus(data.status, data.errorMessage ?? undefined, hint);
+    onStatus(data.status, data.errorMessage ?? undefined);
 
     if (data.status === "COMPLETED" || data.status === "PARTIAL" || data.status === "FAILED") {
       return { status: data.status, errorMessage: data.errorMessage };
@@ -85,7 +80,7 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
   async function handleGenerate() {
     setLoading(true);
     setStatus({ type: null, message: "" });
-    setProgressMessage("Preparando...");
+    setProgressMessage("Em fila...");
     abortRef.current = false;
 
     try {
@@ -114,11 +109,8 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
         throw new Error(err.error ?? "Não foi possível iniciar a geração.");
       }
 
-      const { status: finalStatus, errorMessage } = await pollReportStatus(report.id, (s, _err, hint) => {
-        if (!abortRef.current) {
-          const base = STATUS_MESSAGES[s];
-          setProgressMessage(hint ? `${base} ${hint}` : base);
-        }
+      const { status: finalStatus, errorMessage } = await pollReportStatus(report.id, (s) => {
+        if (!abortRef.current) setProgressMessage(STATUS_MESSAGES[s]);
       });
 
       setProgressMessage(null);

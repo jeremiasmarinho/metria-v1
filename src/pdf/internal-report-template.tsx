@@ -2,28 +2,26 @@ import React from "react";
 import { Document, Page, View, Text } from "@react-pdf/renderer";
 import type { ProcessedMetrics } from "@/types/integrations";
 import type { ChartSlot } from "@/lib/pipeline/compile-pdf";
-import { PdfHeader } from "./components/header";
-import { MetricsTable } from "./components/metrics-table";
-import { ExecutiveSummary } from "./components/executive-summary";
 import { PdfBarChart } from "./components/pdf-bar-chart";
 import { ChartPlaceholder } from "./components/chart-placeholder";
+import { MetricsTable } from "./components/metrics-table";
 import { styles } from "./styles";
 
-interface ReportTemplateProps {
+interface InternalReportTemplateProps {
   clientName: string;
   period: string;
   processed: ProcessedMetrics;
-  aiAnalysis: string;
-  chartSlots?: ChartSlot[];
+  aiAnalysisInternal: string;
+  chartSlots: ChartSlot[];
 }
 
-export function ReportTemplate({
+export function InternalReportTemplate({
   clientName,
   period,
   processed,
-  aiAnalysis,
-  chartSlots = [],
-}: ReportTemplateProps) {
+  aiAnalysisInternal,
+  chartSlots,
+}: InternalReportTemplateProps) {
   const totalSessoes =
     processed.totalSessoes ?? processed.googleAnalytics?.sessions ?? 0;
   const totalUsuarios =
@@ -48,10 +46,10 @@ export function ReportTemplate({
     { label: "Investimento Total (Meta)", value: `R$ ${investimentoTotal.toFixed(2)}` },
     { label: "Sessões (GA4)", value: totalSessoes },
     { label: "Usuários (GA4)", value: totalUsuarios },
-    { label: "Intenção (cliques WhatsApp / eventos de intenção)", value: totalIntentEvents },
+    { label: "Intenção (cliques WhatsApp)", value: totalIntentEvents },
     { label: "Conversões Reais (Leads)", value: totalRealConversions },
     {
-      label: "Custo por Lead Real (CPL Real)",
+      label: "CPL Real",
       value:
         totalRealConversions > 0 && investimentoTotal > 0
           ? `R$ ${cplReal.toFixed(2)}`
@@ -59,13 +57,24 @@ export function ReportTemplate({
     },
   ];
 
-  const hasKpis = kpiRows.some((row) => row.value !== 0 && row.value !== "R$ 0.00");
+  const periodFormatted = new Date(period + "-01")
+    .toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <PdfHeader clientName={clientName} period={period} />
-        <ExecutiveSummary content={aiAnalysis} />
+        <View style={[styles.header, { marginBottom: 16 }]}>
+          <Text style={[styles.title, { fontSize: 14 }]}>Visão da Agência (Uso Interno)</Text>
+          <Text style={styles.subtitle}>
+            {clientName} — {periodFormatted}
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Diagnóstico e Ações Recomendadas</Text>
+          <Text style={styles.text}>{aiAnalysisInternal}</Text>
+        </View>
+
         {chartSlots.map((slot, i) =>
           slot.type === "chart" ? (
             <PdfBarChart key={i} title={slot.title} labels={slot.labels} data={slot.data} />
@@ -73,19 +82,11 @@ export function ReportTemplate({
             <ChartPlaceholder key={i} title={slot.title} />
           )
         )}
-        {hasKpis ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>KPIs Principais</Text>
-            <MetricsTable
-              rows={kpiRows.map((row) => ({ label: row.label, value: row.value }))}
-            />
-          </View>
-        ) : (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Métricas</Text>
-            <Text style={styles.text}>Sem dados registrados para este período.</Text>
-          </View>
-        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>KPIs Principais</Text>
+          <MetricsTable rows={kpiRows.map((r) => ({ label: r.label, value: r.value }))} />
+        </View>
       </Page>
     </Document>
   );

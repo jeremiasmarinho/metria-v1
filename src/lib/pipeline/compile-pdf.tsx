@@ -1,6 +1,7 @@
 import React from "react";
 import { renderToStream, Font } from "@react-pdf/renderer";
 import { ReportTemplate } from "@/pdf/report-template";
+import { InternalReportTemplate } from "@/pdf/internal-report-template";
 
 Font.register({
   family: "Roboto",
@@ -22,6 +23,13 @@ interface CompileOptions {
   period: string;
   processed: ProcessedMetrics;
   aiAnalysis: string;
+}
+
+interface InternalCompileOptions {
+  clientName: string;
+  period: string;
+  processed: ProcessedMetrics;
+  aiAnalysisInternal: string;
 }
 
 function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
@@ -83,6 +91,57 @@ export async function compileReportPdf(options: CompileOptions): Promise<Buffer>
       period={period}
       processed={processed}
       aiAnalysis={aiAnalysis}
+      chartSlots={chartSlots}
+    />
+  );
+  const stream = await renderToStream(doc);
+  return streamToBuffer(stream);
+}
+
+export async function compileInternalReportPdf(
+  options: InternalCompileOptions
+): Promise<Buffer> {
+  const { clientName, period, processed, aiAnalysisInternal } = options;
+  const chartSlots: ChartSlot[] = [];
+
+  if (processed.googleAnalytics) {
+    const ga = processed.googleAnalytics;
+    const labels = ["Usuários", "Sessões", "Pageviews", "Conversões"];
+    const data = [
+      ga.users ?? 0,
+      ga.sessions ?? 0,
+      ga.pageviews ?? 0,
+      ga.conversions ?? 0,
+    ];
+    chartSlots.push(
+      allZero(data)
+        ? { type: "placeholder", title: "Métricas GA4" }
+        : { type: "chart", title: "Métricas GA4", labels, data }
+    );
+  }
+
+  if (processed.metaAds) {
+    const ma = processed.metaAds;
+    const labels = ["Alcance", "Impressões", "Cliques", "Conversões"];
+    const data = [
+      ma.reach ?? 0,
+      ma.impressions ?? 0,
+      ma.clicks ?? 0,
+      ma.conversions ?? 0,
+    ];
+    chartSlots.push(
+      allZero(data)
+        ? { type: "placeholder", title: "Métricas Meta Ads" }
+        : { type: "chart", title: "Métricas Meta Ads", labels, data }
+    );
+  }
+
+  const doc = (
+    <InternalReportTemplate
+      clientName={clientName}
+      period={period}
+      processed={processed}
+      aiAnalysisInternal={aiAnalysisInternal}
       chartSlots={chartSlots}
     />
   );

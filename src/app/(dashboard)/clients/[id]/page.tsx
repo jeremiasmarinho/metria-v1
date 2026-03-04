@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { GenerateReportButton } from "@/components/clients/generate-report-button";
@@ -39,6 +40,11 @@ export default async function ClientDetailPage({ params }: PageProps) {
     googlePropertyId?: string;
     googleSiteUrl?: string;
     metaAdAccountId?: string;
+    trackingPreferences?: {
+      ga4IntentEvents?: string[];
+      ga4ConversionEvents?: string[];
+      metaConversionEvents?: string[];
+    };
   };
 
   return (
@@ -76,13 +82,15 @@ export default async function ClientDetailPage({ params }: PageProps) {
           </div>
         </section>
 
-        <ClientDetailTabs
-          client={client}
-          reportConfig={reportConfig}
-          integrations={integrations}
-          agencyHasMeta={agencyHasMeta}
-          agencyHasGoogle={agencyHasGoogle}
-        />
+        <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-muted/50" />}>
+          <ClientDetailTabs
+            client={client}
+            reportConfig={reportConfig}
+            integrations={integrations}
+            agencyHasMeta={agencyHasMeta}
+            agencyHasGoogle={agencyHasGoogle}
+          />
+        </Suspense>
       </div>
     </div>
   );

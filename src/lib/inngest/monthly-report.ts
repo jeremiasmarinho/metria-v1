@@ -2,7 +2,7 @@ import { inngest } from "./client";
 import { db } from "@/lib/db";
 import { ingestClientMetrics } from "@/lib/pipeline/ingest";
 import { processClientMetrics } from "@/lib/pipeline/process";
-import { analyzeMetrics } from "@/lib/pipeline/analyze";
+import { analyzeMetrics, formatInternalReportForStorage } from "@/lib/pipeline/analyze";
 import { compileReportPdf } from "@/lib/pipeline/compile-pdf";
 import { storeReportPdf } from "@/lib/pipeline/store";
 import { deliverReport } from "@/lib/pipeline/deliver";
@@ -13,7 +13,8 @@ import {
 } from "@/lib/constants";
 import type { ReportStatus } from "@prisma/client";
 
-async function runPipelineForClient(clientId: string, agencyId: string, period: Date) {
+/** Função principal do pipeline; pode ser chamada via Inngest ou diretamente (modo síncrono). */
+export async function runPipelineForClient(clientId: string, agencyId: string, period: Date) {
   const client = await db.client.findUniqueOrThrow({ where: { id: clientId } });
 
   const report = await db.report.upsert({
@@ -71,8 +72,9 @@ async function runPipelineForClient(clientId: string, agencyId: string, period: 
     const processed = await processClientMetrics(clientId, period);
 
     await updateStatus("ANALYZING");
-    const { client: aiAnalysis, internal: aiAnalysisInternal } =
-      await analyzeMetrics(processed, client.name);
+    const analysisOutput = await analyzeMetrics(processed, client.name);
+    const aiAnalysis = analysisOutput.clientReport.resumoExecutivo;
+    const aiAnalysisInternal = formatInternalReportForStorage(analysisOutput.internalReport);
 
     await updateStatus("COMPILING");
     const periodStr = period.toISOString().slice(0, 7);
@@ -123,6 +125,7 @@ async function runPipelineForClient(clientId: string, agencyId: string, period: 
 export const manualReport = inngest.createFunction(
   {
     id: "manual-report",
+    name: "Gerar relatório (por demanda)",
     retries: 2,
   },
   { event: "metria/generate-report" },
@@ -143,6 +146,7 @@ export const manualReport = inngest.createFunction(
 export const monthlyReport = inngest.createFunction(
   {
     id: "monthly-report",
+    name: "Relatório mensal automático",
     retries: 2,
     concurrency: { limit: MAX_CONCURRENT_CLIENTS },
   },

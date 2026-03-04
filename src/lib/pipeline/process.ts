@@ -86,5 +86,39 @@ export async function processClientMetrics(
     };
   }
 
+  // Métricas cirúrgicas (Modelo Oto): consolidação para IA e PDF
+  const gaRaw = curr.GOOGLE_ANALYTICS as Record<string, unknown> | undefined;
+  const totalSessoes = result.googleAnalytics?.sessions ?? 0;
+  const totalUsuarios = result.googleAnalytics?.users ?? 0;
+  const totalIntentEvents = (gaRaw?.totalIntentEvents as number | undefined) ?? 0;
+  const totalRealConversions =
+    (gaRaw?.totalRealConversions as number | undefined) ??
+    result.googleAnalytics?.conversions ??
+    0;
+  const totalMetaConversions = result.metaAds?.conversions ?? 0;
+  const investimentoTotal = result.metaAds?.spend ?? 0;
+  const pageBreakdown: ProcessedMetrics["pageBreakdown"] = Array.isArray(gaRaw?.pageBreakdown)
+    ? (gaRaw.pageBreakdown as ProcessedMetrics["pageBreakdown"])
+    : [];
+
+  result.totalSessoes = totalSessoes;
+  result.totalUsuarios = totalUsuarios;
+  result.totalIntentEvents = totalIntentEvents;
+  result.totalRealConversions = totalRealConversions;
+  result.totalMetaConversions = totalMetaConversions;
+  result.investimentoTotal = investimentoTotal;
+  result.cplMeta = totalMetaConversions > 0 ? investimentoTotal / totalMetaConversions : undefined;
+  result.cplReal = totalRealConversions > 0 ? investimentoTotal / totalRealConversions : undefined;
+  if (Array.isArray(pageBreakdown) && pageBreakdown.length > 0) {
+    result.pageBreakdown = pageBreakdown;
+  }
+
+  if (result.googleAnalytics) {
+    const ga = result.googleAnalytics as Record<string, unknown>;
+    if (totalIntentEvents > 0) ga.totalIntentEvents = totalIntentEvents;
+    if (totalRealConversions > 0) ga.totalRealConversions = totalRealConversions;
+    if (Array.isArray(pageBreakdown) && pageBreakdown.length > 0) ga.pageBreakdown = pageBreakdown;
+  }
+
   return result;
 }

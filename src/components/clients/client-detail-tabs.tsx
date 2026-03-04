@@ -17,6 +17,11 @@ interface ClientDetailTabsProps {
     googlePropertyId?: string;
     googleSiteUrl?: string;
     metaAdAccountId?: string;
+    trackingPreferences?: {
+      ga4IntentEvents?: string[];
+      ga4ConversionEvents?: string[];
+      metaConversionEvents?: string[];
+    };
   };
   integrations: Record<string, unknown> | null;
   agencyHasMeta?: boolean;

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ReportStatus } from "@/components/reports/report-status";
-import { Download, AlertTriangle, Sparkles } from "lucide-react";
+import { Download, FileDown, AlertTriangle, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,28 +35,66 @@ export default async function ReportDetailPage({ params }: PageProps) {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <ReportStatus status={report.status} />
-            {report.pdfUrl && (
-              <a
-                href={report.pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  buttonVariants({ size: "lg" }),
-                  "rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Baixar PDF
-              </a>
-            )}
+            <div className="flex items-center gap-4">
+              {report.pdfUrl && (
+                <a
+                  href={report.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    buttonVariants({ size: "lg" }),
+                    "rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+                  )}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Baixar PDF  do Cliente
+                </a>
+              )}
+              {report.aiAnalysisInternal && (
+                <a
+                  href={`/api/reports/${report.id}/internal-pdf`}
+                  className={cn(
+                    buttonVariants({ size: "lg" }),
+                    "rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md",
+                    "border-0 bg-amber-500 text-white shadow-[0_4px_14px_hsl(38_92%_50%/0.35)] hover:bg-amber-600 hover:shadow-[0_10px_24px_hsl(38_92%_50%/0.4)]"
+                  )}
+                >
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Baixar PDF Interno
+                </a>
+              )}
+            </div>
           </div>
           </div>
         </section>
 
+        {report.aiAnalysisInternal && (
+          <Card className="app-enter app-enter-delay-1 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-50 shadow-lg">
+            <CardHeader className="border-b border-amber-500/20 bg-slate-950/40">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg leading-none">🔥</span>
+                  <CardTitle className="text-base sm:text-lg">
+                    Visão da Agência (Uso Interno)
+                  </CardTitle>
+                </div>
+                <span className="inline-flex items-center rounded-full border border-amber-400/60 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-100">
+                  O cliente não vê estas informações no PDF.
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-100/90">
+                {report.aiAnalysisInternal}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {report.errorMessage && (
-          <div className="app-enter app-enter-delay-1 flex gap-4 rounded-2xl border border-destructive/20 bg-destructive/10 p-5 shadow-sm transition-all duration-300 ease-in-out">
+          <div className="app-enter app-enter-delay-2 flex gap-4 rounded-2xl border border-destructive/20 bg-destructive/10 p-5 shadow-sm transition-all duration-300 ease-in-out">
             <AlertTriangle className="h-6 w-6 text-destructive shrink-0" />
             <div>
               <h3 className="font-semibold text-destructive mb-1">Falha na geração</h3>
@@ -65,7 +103,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           </div>
         )}
 
-        <Card className="app-enter app-enter-delay-2 rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
+        <Card className="app-enter app-enter-delay-3 rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
           <CardHeader className="border-b bg-muted/30">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-500" />
@@ -87,24 +125,6 @@ export default async function ReportDetailPage({ params }: PageProps) {
             </div>
           </CardContent>
         </Card>
-
-        {report.aiAnalysisInternal && (
-          <Card className="app-enter app-enter-delay-3 rounded-2xl border-border/70 shadow-sm transition-all duration-300 ease-in-out">
-            <CardHeader className="border-b bg-muted/30">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-500" />
-                <CardTitle>Relatório Interno (Equipe)</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="prose prose-sm md:prose-base max-w-none text-muted-foreground">
-                <p className="whitespace-pre-wrap leading-relaxed">
-                  {report.aiAnalysisInternal}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );

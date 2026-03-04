@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { ProcessedMetrics } from "@/types/integrations";
+import type { AIAnalysisOutput } from "@/types/report";
 
 const OPENAI_SYSTEM_PROMPT = `Você é um analista direto de marketing digital.
 Analise os dados de performance e gere um resumo executivo em português brasileiro.
@@ -151,4 +152,160 @@ function formatPeriod(period: string): string {
   if (!year || !month) return period;
   const date = new Date(year, month - 1, 1);
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+// --- Modelo Oto: relatório duplo em uma única chamada JSON ---
+
+const OTO_SYSTEM = `Atue como um Analista Sênior de Marketing Digital.
+Retorne um JSON estrito com exatamente duas chaves: "clientReport" e "internalReport".
+Use apenas os dados fornecidos. Não invente métricas.`;
+
+function buildOtoUserPrompt(params: {
+  clientName: string;
+  period: string;
+  totalSessoes: number;
+  totalUsuarios: number;
+  totalIntentEvents: number;
+  totalRealConversions: number;
+  totalMetaConversions: number;
+  investimentoTotal: number;
+  cplMeta: number | null;
+  cplReal: number | null;
+  pageBreakdown: Array<{ page: string; source: string; sessions: number; intents: number; conversions: number }>;
+}): string {
+  const {
+    clientName,
+    period,
+    totalSessoes,
+    totalUsuarios,
+    totalIntentEvents,
+    totalRealConversions,
+    totalMetaConversions,
+    investimentoTotal,
+    cplMeta,
+    cplReal,
+    pageBreakdown,
+  } = params;
+  const breakdownJson =
+    pageBreakdown.length > 0
+      ? JSON.stringify(pageBreakdown.slice(0, 30), null, 2)
+      : "[] (nenhum dado por página/origem)";
+  return `Cliente: ${clientName}
+Período: ${period}
+
+Métricas calculadas:
+- totalSessoes: ${totalSessoes}
+- totalUsuarios: ${totalUsuarios}
+- totalIntentEvents (intenção, ex.: cliques WhatsApp): ${totalIntentEvents}
+- totalRealConversions (conversões reais GA4): ${totalRealConversions}
+- totalMetaConversions (conversões Meta filtradas): ${totalMetaConversions}
+- investimentoTotal (R$): ${investimentoTotal.toFixed(2)}
+- cplMeta (investimentoTotal / totalMetaConversions): ${cplMeta != null ? `R$ ${cplMeta.toFixed(2)}` : "N/A"}
+- cplReal (investimentoTotal / totalRealConversions): ${cplReal != null ? `R$ ${cplReal.toFixed(2)}` : "N/A"}
+
+pageBreakdown (página, origem, sessões, intenções, conversões) — use para identificar gargalos:
+${breakdownJson}
+
+Instruções:
+Retorne um JSON com duas chaves:
+
+1) "clientReport": objeto com uma chave "resumoExecutivo" (string).
+   No resumoExecutivo: explique a eficiência real das campanhas, a discrepância entre leads reportados pelo Meta e leads reais do GA4 (quando aplicável), causas possíveis, impacto na decisão e recomendações executivas. Foco em Custo por Lead Real.
+
+2) "internalReport": objeto com as chaves "diagnosticoGeral" (string), "canalMaisEficiente" (string), "gargaloPrincipal" (string), "acoesRecomendadas" (array de exatamente 2 strings).
+   - diagnosticoGeral: resumo do desempenho para a equipe.
+   - canalMaisEficiente: qual canal/origem performou melhor.
+   - gargaloPrincipal: página ou contexto com alto tráfego e baixa conversão real (use pageBreakdown).
+   - acoesRecomendadas: exatamente 2 ações práticas recomendadas.`;
+}
+
+/**
+ * Gera os dois relatórios (cliente + interno) numa única chamada, com saída JSON estruturada (Modelo Oto).
+ */
+export async function generateOtoDualReport(
+  processed: ProcessedMetrics,
+  clientName: string,
+  options?: { timeoutMs?: number }
+): Promise<AIAnalysisOutput> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
+
+  const periodFormatted = formatPeriod(processed.period);
+  const totalSessoes = processed.totalSessoes ?? processed.googleAnalytics?.sessions ?? 0;
+  const totalUsuarios = processed.totalUsuarios ?? processed.googleAnalytics?.users ?? 0;
+  const totalIntentEvents = processed.totalIntentEvents ?? 0;
+  const totalRealConversions = processed.totalRealConversions ?? processed.googleAnalytics?.conversions ?? 0;
+  const totalMetaConversions = processed.totalMetaConversions ?? processed.metaAds?.conversions ?? 0;
+  const investimentoTotal = processed.investimentoTotal ?? processed.metaAds?.spend ?? 0;
+  const cplMeta =
+    totalMetaConversions > 0 && investimentoTotal >= 0
+      ? investimentoTotal / totalMetaConversions
+      : null;
+  const cplReal =
+    totalRealConversions > 0 && investimentoTotal >= 0
+      ? investimentoTotal / totalRealConversions
+      : null;
+  const pageBreakdown = processed.pageBreakdown ?? [];
+
+  const userContent = buildOtoUserPrompt({
+    clientName,
+    period: periodFormatted,
+    totalSessoes,
+    totalUsuarios,
+    totalIntentEvents,
+    totalRealConversions,
+    totalMetaConversions,
+    investimentoTotal,
+    cplMeta,
+    cplReal,
+    pageBreakdown,
+  });
+
+  const client = new OpenAI({ apiKey });
+  const timeoutMs = options?.timeoutMs ?? 90_000;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const completion = await client.chat.completions.create(
+      {
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: OTO_SYSTEM },
+          { role: "user", content: userContent },
+        ],
+        max_tokens: 2000,
+        response_format: { type: "json_object" },
+      },
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
+    const raw = completion.choices[0]?.message?.content?.trim() ?? "";
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "clientReport" in parsed &&
+      "internalReport" in parsed &&
+      typeof (parsed as AIAnalysisOutput).clientReport?.resumoExecutivo === "string"
+    ) {
+      const out = parsed as AIAnalysisOutput;
+      let acoes = out.internalReport.acoesRecomendadas;
+      if (!Array.isArray(acoes)) acoes = [];
+      if (acoes.length > 2) acoes = acoes.slice(0, 2);
+      if (acoes.length < 2) {
+        acoes = [
+          ...acoes,
+          ...Array(2 - acoes.length)
+            .fill("Ação a definir com base nos dados.") as string[],
+        ];
+      }
+      out.internalReport.acoesRecomendadas = acoes;
+      return out;
+    }
+    throw new Error("Resposta da IA não contém clientReport.resumoExecutivo");
+  } catch (err) {
+    clearTimeout(timeout);
+    throw err;
+  }
 }

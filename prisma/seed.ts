@@ -32,40 +32,7 @@ async function main() {
     update: {},
   });
 
-  await prisma.client.upsert({
-    where: {
-      agencyId_slug: { agencyId: agency.id, slug: "cliente-teste-1" },
-    },
-    create: {
-      name: "Cliente Teste 1",
-      slug: "cliente-teste-1",
-      active: true,
-      email: "kllarvini@gmail.com",
-      phone: "5563992361046",
-      agencyId: agency.id,
-      integrations: {},
-      reportConfig: {},
-    },
-    update: {},
-  });
-
-  await prisma.client.upsert({
-    where: {
-      agencyId_slug: { agencyId: agency.id, slug: "cliente-teste-2" },
-    },
-    create: {
-      name: "Cliente Teste 2",
-      slug: "cliente-teste-2",
-      active: true,
-      email: "contato@cliente2.com",
-      agencyId: agency.id,
-      integrations: {},
-      reportConfig: {},
-    },
-    update: {},
-  });
-
-  console.log("Seed completed: Agency", agency.id, ", User, 2 Clients");
+  console.log("Seed completed: Agency", agency.id, ", User");
 }
 
 main()

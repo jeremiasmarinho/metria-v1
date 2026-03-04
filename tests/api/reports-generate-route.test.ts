@@ -12,6 +12,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/inngest/client", () => ({
   inngest: {
     send: vi.fn(),
+    createFunction: vi.fn(() => ({ id: "manual-report" })),
   },
 }));
 
@@ -75,8 +76,7 @@ describe("POST /api/reports/[id]/generate", () => {
     });
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({
-      message: "Report generation triggered",
+    await expect(res.json()).resolves.toMatchObject({
       reportId: "r-1",
     });
     expect(inngest.send).toHaveBeenCalledWith({

@@ -2,7 +2,6 @@
  * Meta Marketing API - lista contas de anúncios da agência.
  * Usa o token da AgencyConnection (conexão "Mãe" / Business Manager) ou
  * META_ADS_ACCESS_TOKEN do .env em desenvolvimento.
- * Bypass Sandbox: em dev, retorna Cliente Cobaia ao falhar (erro de faturamento).
  * @see https://developers.facebook.com/docs/graph-api/using-graph-api/pagination
  */
 
@@ -13,17 +12,6 @@ export interface MetaAdAccount {
   id: string; // act_xxxxx
   name: string;
   accountStatus: number;
-}
-
-/** Mock para bypass em Sandbox/desenvolvimento */
-const SANDBOX_MOCK_ACCOUNT: MetaAdAccount = {
-  id: "act_123456789",
-  name: "Cliente Cobaia Meta (Sandbox)",
-  accountStatus: 1,
-};
-
-function isSandboxBypassEnabled(): boolean {
-  return process.env.NODE_ENV !== "production";
 }
 
 export async function listMetaAdAccounts(
@@ -44,9 +32,6 @@ export async function listMetaAdAccounts(
       const res = await fetch(url);
 
       if (!res.ok) {
-        if (isSandboxBypassEnabled()) {
-          return [SANDBOX_MOCK_ACCOUNT];
-        }
         if (res.status === 401) throw new Error("META_TOKEN_INVALID");
         if (res.status === 403) throw new Error("META_PERMISSION_DENIED");
         const text = await res.text();
@@ -77,9 +62,6 @@ export async function listMetaAdAccounts(
     }
     return allAccounts;
   } catch (err) {
-    if (isSandboxBypassEnabled()) {
-      return [SANDBOX_MOCK_ACCOUNT];
-    }
     throw err;
   }
 }

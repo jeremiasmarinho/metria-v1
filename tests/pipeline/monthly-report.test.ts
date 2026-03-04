@@ -21,9 +21,10 @@ vi.mock("@/lib/pipeline/process", () => ({
   processClientMetrics: vi.fn(),
 }));
 
-vi.mock("@/lib/pipeline/analyze", () => ({
-  analyzeMetrics: vi.fn(),
-}));
+vi.mock("@/lib/pipeline/analyze", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/pipeline/analyze")>();
+  return { ...actual, analyzeMetrics: vi.fn() };
+});
 
 vi.mock("@/lib/pipeline/compile-pdf", () => ({
   compileReportPdf: vi.fn(),
@@ -75,8 +76,13 @@ describe("monthly-report pipeline integration", () => {
       metaAds: null,
     } as never);
     vi.mocked(analyzeMetrics).mockResolvedValue({
-      client: "Resumo executivo cliente",
-      internal: "Relatório interno equipe",
+      clientReport: { resumoExecutivo: "Resumo executivo cliente" },
+      internalReport: {
+        diagnosticoGeral: "Diagnóstico geral.",
+        canalMaisEficiente: "Google",
+        gargaloPrincipal: "Landing page X",
+        acoesRecomendadas: ["Otimizar página X.", "Escalar canal Y."],
+      },
     } as never);
     vi.mocked(compileReportPdf).mockResolvedValue(Buffer.from("pdf") as never);
     vi.mocked(storeReportPdf).mockResolvedValue("https://signed/report.pdf" as never);

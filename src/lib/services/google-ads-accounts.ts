@@ -2,16 +2,10 @@
  * Google Ads API - lista contas acessíveis (MCC / managed accounts).
  * O Developer Token é obrigatório para qualquer chamada à API.
  * @see https://developers.google.com/google-ads/api/docs/first-call/overview#developer_token
- *
- * Bypass Sandbox: em desenvolvimento, listAccessibleCustomers retorna 404 quando o
- * Developer Token está em modo teste. O bypass injeta o Cliente Cobaia para não travar a UI.
  */
 
 const API_VERSION = "v18";
 const BASE_URL = `https://googleads.googleapis.com/${API_VERSION}`;
-
-/** ID fixo do Cliente Cobaia para bypass em ambiente Sandbox/desenvolvimento */
-const SANDBOX_MOCK_CUSTOMER_ID = "1901239684";
 
 export interface GoogleAdsAccount {
   id: string; // resource name: customers/1234567890
@@ -19,26 +13,9 @@ export interface GoogleAdsAccount {
   descriptiveName?: string;
 }
 
-function isSandboxBypassEnabled(): boolean {
-  return (
-    process.env.NODE_ENV !== "production" ||
-    process.env.GOOGLE_ADS_SANDBOX_BYPASS === "true"
-  );
-}
-
 export async function listGoogleAdsAccounts(
   accessToken: string
 ): Promise<GoogleAdsAccount[]> {
-  if (isSandboxBypassEnabled()) {
-    return [
-      {
-        id: `customers/${SANDBOX_MOCK_CUSTOMER_ID}`,
-        customerId: formatCustomerId(SANDBOX_MOCK_CUSTOMER_ID),
-        descriptiveName: "Cliente Cobaia (Sandbox)",
-      },
-    ];
-  }
-
   const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
   if (!developerToken || developerToken.trim() === "") {
     throw new Error(
