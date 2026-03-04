@@ -18,15 +18,16 @@ export default async function DashboardPage() {
 
   if (agencyId) {
     try {
+      // Relatórios "neste mês" = gerados no mês corrente (createdAt), não pelo period
       const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
       const [totalClients, activeClients, totalReportsThisMonth, completedReportsThisMonth, recent] =
         await Promise.all([
           db.client.count({ where: { agencyId } }),
           db.client.count({ where: { agencyId, active: true } }),
-          db.report.count({ where: { agencyId, period: { gte: currentMonthStart } } }),
+          db.report.count({ where: { agencyId, createdAt: { gte: currentMonthStart } } }),
           db.report.count({
-            where: { agencyId, status: "COMPLETED", period: { gte: currentMonthStart } },
+            where: { agencyId, status: "COMPLETED", createdAt: { gte: currentMonthStart } },
           }),
           db.report.findMany({
             where: { agencyId },
@@ -56,7 +57,7 @@ export default async function DashboardPage() {
       nextMonth = 0;
       nextYear++;
     }
-    return new Date(nextYear, nextMonth, 2).toLocaleDateString("pt-BR", {
+    return new Date(nextYear, nextMonth, 5).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "long",
       year: "numeric",

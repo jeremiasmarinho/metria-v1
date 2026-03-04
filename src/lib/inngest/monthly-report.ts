@@ -150,7 +150,7 @@ export const monthlyReport = inngest.createFunction(
     retries: 2,
     concurrency: { limit: MAX_CONCURRENT_CLIENTS },
   },
-  { cron: "0 6 2 * *" },
+  { cron: "0 6 5 * *" },
   async ({ step }) => {
     const agencyId = process.env.AGENCY_ID;
     if (!agencyId) throw new Error("AGENCY_ID not configured");
