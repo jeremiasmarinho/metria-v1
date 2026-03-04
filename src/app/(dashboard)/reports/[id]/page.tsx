@@ -37,7 +37,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           
           <div className="flex flex-wrap items-center gap-4">
             <ReportStatus status={report.status} />
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               {report.pdfUrl && (
                 <a
                   href={report.pdfUrl}
@@ -45,11 +45,11 @@ export default async function ReportDetailPage({ params }: PageProps) {
                   rel="noopener noreferrer"
                   className={cn(
                     buttonVariants({ size: "lg" }),
-                    "rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+                    "w-full justify-center sm:w-auto rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
                   )}
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  Baixar PDF  do Cliente
+                  Baixar PDF do Cliente
                 </a>
               )}
               {report.aiAnalysisInternal && (
@@ -57,7 +57,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
                   href={`/api/reports/${report.id}/internal-pdf`}
                   className={cn(
                     buttonVariants({ size: "lg" }),
-                    "rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md",
+                    "w-full justify-center sm:w-auto rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md",
                     "border-0 bg-amber-500 text-white shadow-[0_4px_14px_hsl(38_92%_50%/0.35)] hover:bg-amber-600 hover:shadow-[0_10px_24px_hsl(38_92%_50%/0.4)]"
                   )}
                 >

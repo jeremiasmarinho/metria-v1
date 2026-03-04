@@ -36,7 +36,10 @@ export async function deliverReport(options: DeliverOptions): Promise<{
       await sendReportEmail({ to: email, clientName, period, pdfUrl });
       emailSent = true;
     } catch (err) {
-      throw err;
+      // Não falhar o pipeline: Resend em modo teste só aceita o e-mail verificado.
+      // O relatório segue gerado e disponível para download; o envio por e-mail
+      // pode ser habilitado após verificar domínio em resend.com/domains
+      console.error("[deliver] Erro ao enviar e-mail:", err);
     }
   }
 
