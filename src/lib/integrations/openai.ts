@@ -172,6 +172,9 @@ function buildOtoUserPrompt(params: {
   cplMeta: number | null;
   cplReal: number | null;
   pageBreakdown: Array<{ page: string; source: string; sessions: number; intents: number; conversions: number }>;
+  customPrompt?: string;
+  googleAdsFocus?: string[];
+  metaAdsFocus?: string[];
 }): string {
   const {
     clientName,
@@ -185,11 +188,37 @@ function buildOtoUserPrompt(params: {
     cplMeta,
     cplReal,
     pageBreakdown,
+    customPrompt,
+    googleAdsFocus,
+    metaAdsFocus,
   } = params;
   const breakdownJson =
     pageBreakdown.length > 0
       ? JSON.stringify(pageBreakdown.slice(0, 30), null, 2)
       : "[] (nenhum dado por página/origem)";
+  const extraLines: string[] = [];
+  if (customPrompt && customPrompt.trim().length > 0) {
+    extraLines.push(
+      "",
+      "Instruções adicionais do analista (priorize estas orientações):",
+      customPrompt.trim()
+    );
+  }
+  if (googleAdsFocus && googleAdsFocus.length > 0) {
+    extraLines.push(
+      "",
+      `Métricas mais importantes no Google Ads: ${googleAdsFocus.join(", ")}.`
+    );
+  }
+  if (metaAdsFocus && metaAdsFocus.length > 0) {
+    extraLines.push(
+      "",
+      `Métricas mais importantes no Meta Ads: ${metaAdsFocus.join(", ")}.`
+    );
+  }
+
+  const extras = extraLines.length ? `${extraLines.join("\n")}\n` : "";
+
   return `Cliente: ${clientName}
 Período: ${period}
 
@@ -205,6 +234,8 @@ Métricas calculadas:
 
 pageBreakdown (página, origem, sessões, intenções, conversões) — use para identificar gargalos:
 ${breakdownJson}
+
+${extras}
 
 Instruções:
 Retorne um JSON com duas chaves:
@@ -225,7 +256,12 @@ Retorne um JSON com duas chaves:
 export async function generateOtoDualReport(
   processed: ProcessedMetrics,
   clientName: string,
-  options?: { timeoutMs?: number }
+  options?: {
+    timeoutMs?: number;
+    customPrompt?: string;
+    googleAdsFocus?: string[];
+    metaAdsFocus?: string[];
+  }
 ): Promise<AIAnalysisOutput> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
@@ -259,6 +295,9 @@ export async function generateOtoDualReport(
     cplMeta,
     cplReal,
     pageBreakdown,
+    customPrompt: options?.customPrompt,
+    googleAdsFocus: options?.googleAdsFocus,
+    metaAdsFocus: options?.metaAdsFocus,
   });
 
   const client = new OpenAI({ apiKey });

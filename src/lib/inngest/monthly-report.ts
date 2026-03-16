@@ -72,7 +72,11 @@ export async function runPipelineForClient(clientId: string, agencyId: string, p
     const processed = await processClientMetrics(clientId, period);
 
     await updateStatus("ANALYZING");
-    const analysisOutput = await analyzeMetrics(processed, client.name);
+    const analysisOutput = await analyzeMetrics(processed, client.name, {
+      customPrompt: report.customPrompt ?? undefined,
+      googleAdsFocus: report.googleAdsFocus ?? undefined,
+      metaAdsFocus: report.metaAdsFocus ?? undefined,
+    });
     const aiAnalysis = analysisOutput.clientReport.resumoExecutivo;
     const aiAnalysisInternal = formatInternalReportForStorage(analysisOutput.internalReport);
 

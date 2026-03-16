@@ -36,11 +36,15 @@ Documento para facilitar a manutenção, debugging e evolução do projeto. Cons
 
 Variáveis opcionais: `INNGEST_*` (produção), `ZAPI_*` (WhatsApp), `GOOGLE_ADS_DEVELOPER_TOKEN`.
 
+### Easypanel — porta do domínio
+
+O app escuta na **porta 3000** (`PORT=3000` no Dockerfile). No Easypanel, em **Domínios** → editar domínio → **Destino**, a porta deve ser **3000**. Se estiver 880 ou outra, o site fica "Service is not reachable".
+
 ---
 
 ## 3. Fluxo de geração de relatórios
 
-1. **Trigger**: Botão "Gerar relatório" ou cron Inngest (dia 02 do mês).
+1. **Trigger**: Botão "Gerar relatório" ou cron Inngest (dia 05 do mês).
 2. **API** `POST /api/reports` → cria registro com status PENDING.
 3. **API** `POST /api/reports/[id]/generate` → dispara evento Inngest `metria/generate-report`.
 4. **Inngest** executa `manualReport` em `src/lib/inngest/monthly-report.ts`.

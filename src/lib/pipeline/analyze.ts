@@ -29,13 +29,23 @@ function fallbackOutput(clientName: string, period: string): AIAnalysisOutput {
 
 export async function analyzeMetrics(
   processed: ProcessedMetrics,
-  clientName: string
+  clientName: string,
+  options?: {
+    customPrompt?: string;
+    googleAdsFocus?: string[];
+    metaAdsFocus?: string[];
+  }
 ): Promise<AIAnalysisOutput> {
   const opts = { timeoutMs: OPENAI_TIMEOUT_MS };
 
   for (let attempt = 0; attempt <= OPENAI_MAX_RETRIES; attempt++) {
     try {
-      const output = await generateOtoDualReport(processed, clientName, opts);
+      const output = await generateOtoDualReport(processed, clientName, {
+        ...opts,
+        customPrompt: options?.customPrompt,
+        googleAdsFocus: options?.googleAdsFocus,
+        metaAdsFocus: options?.metaAdsFocus,
+      });
       if (
         output?.clientReport?.resumoExecutivo &&
         output?.internalReport &&

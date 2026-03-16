@@ -10,6 +10,13 @@ const createReportSchema = z.object({
   period: z.string().refine((v) => !isNaN(Date.parse(v)), {
     message: "period must be a valid date string",
   }),
+  customPrompt: z
+    .string()
+    .trim()
+    .max(1000)
+    .optional(),
+  googleAdsFocus: z.array(z.string().min(1)).optional(),
+  metaAdsFocus: z.array(z.string().min(1)).optional(),
 });
 
 export async function GET() {
@@ -63,8 +70,17 @@ export async function POST(request: Request) {
       agencyId: auth.user.agencyId,
       period: new Date(parsed.data.period),
       status: "PENDING",
+      customPrompt: parsed.data.customPrompt?.length ? parsed.data.customPrompt : null,
+      googleAdsFocus: parsed.data.googleAdsFocus ?? [],
+      metaAdsFocus: parsed.data.metaAdsFocus ?? [],
     },
-    update: { status: "PENDING", errorMessage: null },
+    update: {
+      status: "PENDING",
+      errorMessage: null,
+      customPrompt: parsed.data.customPrompt?.length ? parsed.data.customPrompt : null,
+      googleAdsFocus: parsed.data.googleAdsFocus ?? [],
+      metaAdsFocus: parsed.data.metaAdsFocus ?? [],
+    },
   });
   return NextResponse.json(report, { status: 201 });
 }

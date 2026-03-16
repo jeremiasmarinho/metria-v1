@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Zap, CheckCircle2, AlertCircle } from "lucide-react";
 import { notify } from "@/lib/ui-feedback";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type ReportStatus =
   | "PENDING"
@@ -75,7 +76,33 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
     message: "",
   });
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [googleAdsFocus, setGoogleAdsFocus] = useState<string[]>(["CONVERSIONS", "CPA", "ROAS"]);
+  const [metaAdsFocus, setMetaAdsFocus] = useState<string[]>(["CONVERSIONS", "CPA", "ROAS"]);
   const abortRef = useRef(false);
+
+  const GOOGLE_OPTIONS: { value: string; label: string }[] = [
+    { value: "CLICKS", label: "Cliques" },
+    { value: "CONVERSIONS", label: "Conversões" },
+    { value: "CPA", label: "CPA (custo por ação)" },
+    { value: "ROAS", label: "ROAS" },
+    { value: "CTR", label: "CTR" },
+    { value: "COST", label: "Custo total" },
+  ];
+
+  const META_OPTIONS: { value: string; label: string }[] = [
+    { value: "REACH", label: "Alcance" },
+    { value: "IMPRESSIONS", label: "Impressões" },
+    { value: "CLICKS", label: "Cliques" },
+    { value: "CONVERSIONS", label: "Conversões" },
+    { value: "CPA", label: "CPA (custo por ação)" },
+    { value: "ROAS", label: "ROAS" },
+  ];
+
+  function toggleInArray(setter: (updater: (prev: string[]) => string[]) => void, value: string) {
+    setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  }
 
   async function handleGenerate() {
     setLoading(true);
@@ -90,7 +117,13 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
       const createRes = await fetch("/api/reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, period: period.toISOString() }),
+        body: JSON.stringify({
+          clientId,
+          period: period.toISOString(),
+          customPrompt: customPrompt.trim() || undefined,
+          googleAdsFocus,
+          metaAdsFocus,
+        }),
       });
 
       if (!createRes.ok) {
@@ -161,24 +194,84 @@ export function GenerateReportButton({ clientId }: { clientId: string }) {
 
   return (
     <div className="flex flex-col md:items-end gap-3">
-      <Button
-        onClick={handleGenerate}
-        disabled={loading}
-        size="lg"
-        className="font-medium rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {displayMessage || "Gerando..."}
-          </>
-        ) : (
-          <>
-            <Zap className="mr-2 h-4 w-4 fill-current text-amber-300" />
-            Gerar relatório do mês anterior
-          </>
+      <div className="w-full max-w-xl md:max-w-md space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            onClick={handleGenerate}
+            disabled={loading}
+            size="lg"
+            className="font-medium rounded-xl shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-md flex-1"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {displayMessage || "Gerando..."}
+              </>
+            ) : (
+              <>
+                <Zap className="mr-2 h-4 w-4 fill-current text-amber-300" />
+                Gerar relatório do mês anterior
+              </>
+            )}
+          </Button>
+          <button
+            type="button"
+            onClick={() => setShowOptions((v) => !v)}
+            className="inline-flex items-center justify-center rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary shadow-sm transition-colors hover:bg-primary/10 whitespace-nowrap"
+          >
+            {showOptions ? "Esconder opções" : "Ajustar análise (IA)"}
+          </button>
+        </div>
+
+        {showOptions && (
+          <div className="rounded-xl border border-border/70 bg-muted/40 p-3 space-y-3 text-left">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Prompt personalizado (opcional)
+              </label>
+              <textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                rows={3}
+                className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                placeholder="Ex.: Foque em geração de leads qualificados no formulário de contato e compare o CPL entre Google Ads e Meta."
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Google Ads – métricas mais importantes</p>
+                <div className="space-y-1">
+                  {GOOGLE_OPTIONS.map(({ value, label }) => (
+                    <label key={value} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={googleAdsFocus.includes(value)}
+                        onCheckedChange={() => toggleInArray(setGoogleAdsFocus, value)}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Meta Ads – métricas mais importantes</p>
+                <div className="space-y-1">
+                  {META_OPTIONS.map(({ value, label }) => (
+                    <label key={value} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={metaAdsFocus.includes(value)}
+                        onCheckedChange={() => toggleInArray(setMetaAdsFocus, value)}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
-      </Button>
+      </div>
 
       {status.type && !loading && (
         <div

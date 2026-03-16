@@ -105,6 +105,12 @@ model Report {
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   aiAnalysisInternal String?
+  /// Prompt personalizado preenchido pelo analista na hora de gerar o relatório.
+  customPrompt       String?
+  /// Lista simples de métricas de foco para Google Ads (ex.: ["CONVERSIONS","CPA","ROAS"]).
+  googleAdsFocus     String[]     @default([])
+  /// Lista simples de métricas de foco para Meta Ads (ex.: ["CONVERSIONS","CPA","ROAS"]).
+  metaAdsFocus       String[]     @default([])
   client             Client       @relation(fields: [clientId], references: [id])
 
   @@unique([clientId, period])
